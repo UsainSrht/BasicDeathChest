@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+    id 'com.gradleup.shadow' version '8.3.6'
+}
+
+group = 'me.usainsrht'
+version = '1.0.0-SNAPSHOT'
+description = 'A production-ready, Folia-compatible death chest plugin for Paper 1.21'
+
+sourceCompatibility = JavaVersion.VERSION_21
+targetCompatibility = JavaVersion.VERSION_21
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url = 'https://jitpack.io' }
+    maven { url = 'https://repo.fancyinnovations.com/releases' }
+}
+
+dependencies {
+    // Paper 1.21 API — provided at runtime by the server
+    compileOnly 'io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT'
+
+    // Vault API — soft-depend, provided by Vault plugin at runtime
+    compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
+
+    // SQLite JDBC — bundled into the plugin jar via shadow
+    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+
+    // Gson is bundled with Paper, but declared for IDE resolution
+    compileOnly 'com.google.code.gson:gson:2.10.1'
+
+    // 3rd Party Holograms
+    compileOnly 'de.oliver:FancyHolograms:2.3.3'
+    compileOnly 'com.github.decentsoftware-eu:decentholograms:2.8.5'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    def props = [version: project.version, description: project.description]
+    inputs.properties(props)
+    filteringCharset = 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand(props)
+    }
+}
+
+shadowJar {
+    archiveClassifier.set('')
+    // Relocate SQLite to avoid conflicts with other plugins
+    relocate 'org.sqlite', 'me.usainsrht.basicdeathchest.libs.sqlite'
+    relocate 'org.xerial', 'me.usainsrht.basicdeathchest.libs.xerial'
+    minimize {
+        exclude(dependency('org.xerial:sqlite-jdbc:.*'))
+    }
+    mergeServiceFiles()
+}
+
+assemble.dependsOn shadowJar

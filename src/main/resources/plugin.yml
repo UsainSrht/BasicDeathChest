@@ -1,0 +1,45 @@
+name: BasicDeathChest
+version: '${version}'
+main: me.usainsrht.basicdeathchest.BasicDeathChest
+description: '${description}'
+api-version: '1.21'
+folia-supported: true
+authors:
+  - Usainsrht
+
+softdepend:
+  - Vault
+  - FancyHolograms
+  - DecentHolograms
+
+commands:
+  deathchest:
+    description: Opens your death locations history GUI.
+    usage: /deathchest [gui|reload|info]
+    aliases: [ dc, bdc, death ]
+    permission: basicdeathchest.use
+
+permissions:
+  basicdeathchest.use:
+    description: Allows the player to have a death chest spawned and access basic commands.
+    default: true
+  basicdeathchest.gui:
+    description: Allows the player to open the death locations GUI.
+    default: true
+  basicdeathchest.teleport:
+    description: Allows the player to teleport to death locations.
+    default: true
+  basicdeathchest.admin:
+    description: Grants admin access (reload, manage other players' chests).
+    default: op
+  basicdeathchest.open-others:
+    description: Allows the player to open other players' death chests.
+    default: op
+  basicdeathchest.break:
+    description: >
+      Checked by the canBreak hook when the plugin needs to remove an obstructing
+      block to place a death chest. External plugins may also gate on this permission.
+    default: op
+  basicdeathchest.teleport.free:
+    description: Bypasses teleport costs entirely.
+    default: false

@@ -1,0 +1,59 @@
+# ============================================================
+#  BasicDeathChest — messages.yml
+#  All messages use MiniMessage format.
+#  Available global placeholders: %player%
+# ============================================================
+
+prefix: "<dark_gray>[<gold>DeathChest</gold>]</dark_gray> "
+
+# ─── General ─────────────────────────────────────────────────
+no-permission: "<red>You don't have permission to do that."
+player-only: "<red>This command can only be run by a player."
+unknown-command: "<red>Unknown subcommand. Use <yellow>/deathchest help<red>."
+
+# ─── Death Chest Spawned ─────────────────────────────────────
+chest-spawned: "<green>Your death chest has been created at <white>%x%<green>, <white>%y%<green>, <white>%z%<green>. <click:run_command:/death><yellow>Click here</yellow></click> or run <yellow>/death</yellow> to see/teleport your death loc."
+chest-spawned-no-space: "<yellow>Warning: Some items could not fit in a chest and were dropped."
+chest-permission-required: "<red>You do not have permission to generate a death chest."
+
+# ─── Chest Interaction ───────────────────────────────────────
+chest-not-owner: "<red>This death chest belongs to someone else."
+chest-opened-by-owner: "<green>Opening your death chest..."
+chest-emptied: "<green>Your death chest was emptied and has been removed."
+chest-expired: "<yellow>Your death chest at <white>%x%<yellow>, <white>%y%<yellow>, <white>%z%<yellow> has expired and the contents were dropped."
+
+# ─── GUI ─────────────────────────────────────────────────────
+gui-no-entries: "<yellow>You have no recorded death locations yet."
+gui-entry-name: "<red>☠ <white>Death #%index%"
+gui-entry-lore-world: "<gray>World: <white>%world%"
+gui-entry-lore-cause: "<gray>Cause: <red>%cause%"
+gui-entry-lore-coords: "<gray>Location: <white>%x%<gray>, <white>%y%<gray>, <white>%z%"
+gui-entry-lore-time: "<gray>Time: <white>%time%"
+gui-entry-lore-click: "<yellow>Click to teleport!"
+
+# ─── Teleportation ───────────────────────────────────────────
+teleport-disabled: "<red>Teleportation to death locations is disabled."
+teleport-no-permission: "<red>You don't have permission to teleport."
+teleport-success: "<green>Teleporting to your death location..."
+teleport-cost: "<yellow>Teleporting cost you <gold>%cost% coins<yellow>."
+teleport-insufficient-funds: "<red>You need <gold>%cost% coins<red> to teleport. You have <gold>%balance%<red>."
+teleport-free-remaining: "<green>Free teleport used. <yellow>%remaining% free teleports remaining."
+teleport-world-not-loaded: "<red>That world is no longer loaded."
+
+# ─── Bodyguards ──────────────────────────────────────────────
+bodyguards-spawned: "<green>Two iron golem bodyguards have been summoned to protect you!"
+bodyguards-despawned: "<yellow>Your bodyguard escort has departed."
+
+# ─── Reload ──────────────────────────────────────────────────
+reload-success: "<green>BasicDeathChest configuration reloaded successfully."
+reload-fail: "<red>An error occurred during reload. Check console for details."
+
+# ─── Hologram Timer Format ───────────────────────────────────
+# Used when the %timer% placeholder is rendered in hologram lines.
+timer-format-infinite: "<green>∞ Never"
+timer-format-seconds: "<yellow>%s%s"  # %s% = remaining seconds
+timer-format-minutes: "<yellow>%m%m %s%s"
+
+# ─── Admin ───────────────────────────────────────────────────
+admin-chest-removed: "<green>Death chest at %location% removed."
+admin-reload-start: "<gray>Reloading BasicDeathChest..."

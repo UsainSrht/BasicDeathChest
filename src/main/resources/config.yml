@@ -1,0 +1,187 @@
+# ============================================================
+#  BasicDeathChest — config.yml
+#  MiniMessage format is used for all text values.
+#  Reload with: /deathchest reload
+# ============================================================
+
+# ─── World Settings ──────────────────────────────────────────
+worlds:
+  # If true, the list below is a whitelist (only listed worlds spawn chests).
+  # If false, the list is a blacklist (listed worlds are excluded).
+  whitelist: true
+  list:
+    - world
+    - world_nether
+    - world_the_end
+
+# ─── Permission Gate ─────────────────────────────────────────
+# If true, a player must have the permission node below to trigger chest spawning.
+require-permission: false
+required-permission: "basicdeathchest.use"
+
+# ─── Chest Container ─────────────────────────────────────────
+container:
+  # Valid materials: CHEST, TRAPPED_CHEST, BARREL
+  # (Copper Chest variants require a dedicated hook — see API docs)
+  type: CHEST
+
+  # Inventory title. Supports: %player%, %date%, %time%
+  # Uses MiniMessage formatting.
+  title: "<gold><bold>%player%</bold></gold><gray> — %date% %time%"
+
+  # Whether breaking an owned/empty death chest drops the chest block itself.
+  drop-on-break: false
+
+  # If true, anyone can open anyone's death chest.
+  open-by-everyone: false
+
+# ─── Timer & Expiration ──────────────────────────────────────
+timer:
+  # Duration in seconds. Set to 0 or negative for infinite lifetime.
+  duration: 300  # 5 minutes
+
+  # Sound played when the chest expires (uses Bukkit Sound enum name).
+  expiry-sound: ENTITY_ENDER_DRAGON_GROWL
+  expiry-sound-volume: 1.0
+  expiry-sound-pitch: 1.0
+
+  # Particle effect on expiry.
+  expiry-particle: EXPLOSION_LARGE
+  expiry-particle-count: 10
+
+# ─── Hologram Settings ───────────────────────────────────────
+hologram:
+  # Backend: VANILLA, FANCY_HOLOGRAMS, DECENT_HOLOGRAMS
+  # Falls back to VANILLA if chosen plugin is absent.
+  backend: FANCY_HOLOGRAMS
+
+  # Y-offset above the chest block center.
+  y-offset: 1.5
+
+  # How often (in ticks) the hologram text refreshes (timer countdown).
+  update-interval-ticks: 20
+
+  # Text lines. Placeholders: %player%, %timer%  (MiniMessage supported)
+  lines:
+    - "<gradient:#FFD700:#FFA500><bold>☠ Death Chest ☠</bold></gradient>"
+    - "<gray>Owner: <white>%player%"
+    - "<aqua>Expires in: <yellow>%timer%"
+
+  # Vanilla TextDisplay-specific settings (ignored for other backends)
+  vanilla:
+    billboard: CENTER          # FIXED, VERTICAL, HORIZONTAL, CENTER
+    see-through: false
+    shadow: true
+    # Background color in ARGB hex. "none" for transparent.
+    background-color: "0x40000000"
+    # Scale of the text display entity.
+    scale-x: 1.0
+    scale-y: 1.0
+    scale-z: 1.0
+
+# ─── Database ────────────────────────────────────────────────
+database:
+  # Backend: SQLITE, JSON
+  backend: SQLITE
+  # How many death entries to keep per player.
+  max-entries-per-player: 50
+
+# ─── Death Locations GUI ─────────────────────────────────────
+gui:
+  title: "<dark_gray>☠ <gold>Death Locations</gold> ☠"
+  # Maximum entries shown in the GUI (max 45 for a 5-row chest inventory).
+  max-entries: 27
+  # Material used for the entry items.
+  entry-material: COMPASS
+  # Material used for filler/border slots.
+  filler-material: GRAY_STAINED_GLASS_PANE
+
+  # Total rows in the GUI inventory (1 to 6).
+  rows: 6
+
+  # Material shown when a player has no death locations.
+  no-record-material: BARRIER
+
+  # Slots where death records will be displayed (allows custom modern designs with borders).
+  # If empty or not set, it defaults to sequential slots starting from 0.
+  slots:
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+
+# ─── Coordinates Message ─────────────────────────────────────
+coordinates:
+  enabled: true
+  # Sent to the player who died.
+  message: "<gray>You died at <white>%x%<gray>, <white>%y%<gray>, <white>%z% <gray>in <green>%world%<gray>."
+
+# ─── Global Death Messages ───────────────────────────────────
+death-messages:
+  # Mode: VANILLA (let Paper handle it), CUSTOM (use custom-format below), DISABLED
+  mode: VANILLA
+  # Only used when mode is CUSTOM.
+  # Placeholders: %player%, %cause%, %x%, %y%, %z%, %world%
+  custom-format: "<red>☠ <white>%player% <gray>died at <white>%x%<gray>, <white>%y%<gray>, <white>%z%<gray>. (Cause: %cause%)"
+
+# ─── Teleportation ───────────────────────────────────────────
+teleport:
+  enabled: true
+  # Number of free teleports per player. After this, cost applies.
+  free-uses: 3
+  # Cost per teleport (requires Vault). Ignored if Vault is absent.
+  cost: 100.0
+
+  # Potion effects applied on arrival. Each entry: type, duration (ticks), amplifier.
+  arrival-effects:
+    - type: RESISTANCE
+      duration: 100
+      amplifier: 1
+    - type: FIRE_RESISTANCE
+      duration: 100
+      amplifier: 0
+
+  # Sound played at the arrival location (heard by nearby players).
+  arrival-sound: ENTITY_ENDER_DRAGON_GROWL
+  arrival-sound-volume: 1.0
+  arrival-sound-pitch: 0.8
+  arrival-sound-radius: 20.0
+
+# ─── Bodyguards ──────────────────────────────────────────────
+bodyguards:
+  # Spawn 2 iron golems that defend the player from nearby hostile mobs.
+  enabled: true
+  # How many seconds the bodyguards survive before despawning.
+  duration: 60
+  # Number of bodyguards to spawn.
+  count: 2
+  # Entity type of the bodyguard (must be a valid LivingEntity type, e.g. IRON_GOLEM, WOLF, ZOMBIE, etc.).
+  type: IRON_GOLEM
+  # How often (in ticks) to update the bodyguard name timer.
+  update-interval-ticks: 20
+  # Custom name template with %timer% placeholder.
+  name: "<green>%timer%s remaining"

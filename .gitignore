@@ -1,0 +1,23 @@
+# Gradle files
+.gradle/
+/build/
+
+# Gradle wrapper ZIP download (the .jar and properties should be tracked, but not the download itself)
+gradle/wrapper/*.zip
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+bin/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Log files
+*.log
