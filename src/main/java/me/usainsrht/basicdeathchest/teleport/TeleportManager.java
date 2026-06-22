@@ -3,9 +3,9 @@ package me.usainsrht.basicdeathchest.teleport;
 import me.usainsrht.basicdeathchest.BasicDeathChest;
 import me.usainsrht.basicdeathchest.database.model.DeathEntry;
 import me.usainsrht.basicdeathchest.util.FoliaUtil;
+import net.kyori.adventure.sound.Sound;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
@@ -141,12 +141,10 @@ public class TeleportManager {
 
     private void playArrivalSound(Location location) {
         Sound sound = plugin.getConfigManager().getArrivalSound();
-        float volume = plugin.getConfigManager().getArrivalSoundVolume();
-        float pitch = plugin.getConfigManager().getArrivalSoundPitch();
         double radius = plugin.getConfigManager().getArrivalSoundRadius();
 
         // Play sound at location (heard by nearby players within radius)
         location.getWorld().getNearbyPlayers(location, radius)
-                .forEach(nearby -> nearby.playSound(location, sound, volume, pitch));
+                .forEach(nearby -> nearby.playSound(sound, location.getX(), location.getY(), location.getZ()));
     }
 }

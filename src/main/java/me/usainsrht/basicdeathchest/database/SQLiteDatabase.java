@@ -84,8 +84,8 @@ public class SQLiteDatabase implements DatabaseManager {
         if (!dataFolder.exists()) dataFolder.mkdirs();
 
         File dbFile = new File(dataFolder, "data.db");
-        // Force-load the relocated SQLite driver
-        Class.forName("me.usainsrht.basicdeathchest.libs.sqlite.JDBC");
+        // Force-load the SQLite driver
+        Class.forName("org.sqlite.JDBC");
         connection = DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
 
         // Enable WAL mode for better concurrency

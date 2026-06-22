@@ -1,8 +1,11 @@
 package me.usainsrht.basicdeathchest.config;
 
 import me.usainsrht.basicdeathchest.BasicDeathChest;
+import net.kyori.adventure.sound.Sound;
 import org.bukkit.Material;
-import org.bukkit.Sound;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
+import org.bukkit.Registry;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -38,9 +41,7 @@ public class ConfigManager {
     // ── Timer ───────────────────────────────────────────────────────────────
     private int timerDuration;        // seconds; ≤ 0 → infinite
     private Sound expirySound;
-    private float expirySoundVolume;
-    private float expirySoundPitch;
-    private String expiryParticle;
+    private Particle expiryParticle;
     private int expiryParticleCount;
 
     // ── Hologram ────────────────────────────────────────────────────────────
@@ -81,8 +82,6 @@ public class ConfigManager {
     private double teleportCost;
     private List<PotionEffect> arrivalEffects;
     private Sound arrivalSound;
-    private float arrivalSoundVolume;
-    private float arrivalSoundPitch;
     private double arrivalSoundRadius;
 
     // ── Bodyguards ───────────────────────────────────────────────────────────
@@ -123,10 +122,10 @@ public class ConfigManager {
 
         // Timer
         timerDuration = cfg.getInt("timer.duration", 300);
-        expirySound = parseSound(cfg.getString("timer.expiry-sound", "ENTITY_ENDER_DRAGON_GROWL"));
-        expirySoundVolume = (float) cfg.getDouble("timer.expiry-sound-volume", 1.0);
-        expirySoundPitch = (float) cfg.getDouble("timer.expiry-sound-pitch", 1.0);
-        expiryParticle = cfg.getString("timer.expiry-particle", "EXPLOSION_LARGE");
+        float expirySoundVolume = (float) cfg.getDouble("timer.expiry-sound-volume", 1.0);
+        float expirySoundPitch = (float) cfg.getDouble("timer.expiry-sound-pitch", 1.0);
+        expirySound = parseSound(cfg.getString("timer.expiry-sound", "ENTITY_ENDER_DRAGON_GROWL"), expirySoundVolume, expirySoundPitch);
+        expiryParticle = parseParticle(cfg.getString("timer.expiry-particle", "EXPLOSION_LARGE"));
         expiryParticleCount = cfg.getInt("timer.expiry-particle-count", 10);
 
         // Hologram
@@ -178,9 +177,9 @@ public class ConfigManager {
         teleportFreeUses = Math.max(0, cfg.getInt("teleport.free-uses", 3));
         teleportCost = Math.max(0, cfg.getDouble("teleport.cost", 100.0));
         arrivalEffects = parseEffects(cfg.getMapList("teleport.arrival-effects"));
-        arrivalSound = parseSound(cfg.getString("teleport.arrival-sound", "ENTITY_ENDER_DRAGON_GROWL"));
-        arrivalSoundVolume = (float) cfg.getDouble("teleport.arrival-sound-volume", 1.0);
-        arrivalSoundPitch = (float) cfg.getDouble("teleport.arrival-sound-pitch", 0.8);
+        float arrivalSoundVolume = (float) cfg.getDouble("teleport.arrival-sound-volume", 1.0);
+        float arrivalSoundPitch = (float) cfg.getDouble("teleport.arrival-sound-pitch", 0.8);
+        arrivalSound = parseSound(cfg.getString("teleport.arrival-sound", "ENTITY_ENDER_DRAGON_GROWL"), arrivalSoundVolume, arrivalSoundPitch);
         arrivalSoundRadius = cfg.getDouble("teleport.arrival-sound-radius", 20.0);
 
         // Bodyguards
@@ -210,14 +209,51 @@ public class ConfigManager {
         return m;
     }
 
-    private Sound parseSound(String name) {
-        if (name == null) return Sound.ENTITY_ENDER_DRAGON_GROWL;
-        try {
-            return Sound.valueOf(name.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid sound '" + name + "' in config — using ENTITY_ENDER_DRAGON_GROWL");
-            return Sound.ENTITY_ENDER_DRAGON_GROWL;
+    private Sound parseSound(String name, float volume, float pitch) {
+        if (name == null) {
+            return Sound.sound(net.kyori.adventure.key.Key.key("entity.ender_dragon.growl"), Sound.Source.MASTER, volume, pitch);
         }
+        
+        String processed = name.trim().toLowerCase();
+        
+        // If it's a legacy uppercase name like ENTITY_ENDER_DRAGON_GROWL, convert to lowercase namespaced key format
+        if (!processed.contains(".") && !processed.contains(":")) {
+            processed = processed.replace('_', '.');
+        }
+        
+        try {
+            net.kyori.adventure.key.Key key = net.kyori.adventure.key.Key.key(processed);
+            return Sound.sound(key, Sound.Source.MASTER, volume, pitch);
+        } catch (Exception e) {
+            return Sound.sound(net.kyori.adventure.key.Key.key("entity.ender_dragon.growl"), Sound.Source.MASTER, volume, pitch);
+        }
+    }
+
+    private org.bukkit.Particle parseParticle(String name) {
+        if (name == null) return org.bukkit.Particle.EXPLOSION;
+        String processed = name.trim().toLowerCase();
+        
+        if (!processed.contains(":") && !processed.contains(".")) {
+            if (processed.equals("explosion_large")) {
+                processed = "explosion";
+            }
+        }
+        
+        NamespacedKey key = NamespacedKey.fromString(processed);
+        if (key != null) {
+            Particle p = Registry.PARTICLE_TYPE.get(key);
+            if (p != null) return p;
+        }
+        
+        String cleaned = processed.replace("_", "");
+        NamespacedKey cleanedKey = NamespacedKey.fromString(cleaned);
+        if (cleanedKey != null) {
+            Particle p = Registry.PARTICLE_TYPE.get(cleanedKey);
+            if (p != null) return p;
+        }
+
+        plugin.getLogger().warning("Invalid particle type '" + name + "' in config — using EXPLOSION");
+        return org.bukkit.Particle.EXPLOSION;
     }
 
     @SuppressWarnings("unchecked")
@@ -232,7 +268,15 @@ public class ConfigManager {
                 int duration = (durObj instanceof Number n) ? n.intValue() : 100;
                 Object ampObj = map.get("amplifier");
                 int amplifier = (ampObj instanceof Number n) ? n.intValue() : 0;
-                PotionEffectType type = PotionEffectType.getByName(typeName);
+                
+                PotionEffectType type = null;
+                if (typeName != null) {
+                    NamespacedKey key = NamespacedKey.fromString(typeName.toLowerCase());
+                    if (key != null) {
+                        type = Registry.POTION_EFFECT_TYPE.get(key);
+                    }
+                }
+                
                 if (type == null) {
                     plugin.getLogger().warning("Unknown potion effect type: " + typeName);
                     continue;
@@ -267,9 +311,9 @@ public class ConfigManager {
     public int getTimerDuration()                   { return timerDuration; }
     public boolean isInfiniteTimer()                { return timerDuration <= 0; }
     public Sound getExpirySound()                   { return expirySound; }
-    public float getExpirySoundVolume()             { return expirySoundVolume; }
-    public float getExpirySoundPitch()              { return expirySoundPitch; }
-    public String getExpiryParticle()               { return expiryParticle; }
+    public float getExpirySoundVolume()             { return expirySound.volume(); }
+    public float getExpirySoundPitch()              { return expirySound.pitch(); }
+    public Particle getExpiryParticle()             { return expiryParticle; }
     public int getExpiryParticleCount()             { return expiryParticleCount; }
     public String getHologramBackend()              { return hologramBackend; }
     public double getHologramYOffset()              { return hologramYOffset; }
@@ -297,8 +341,8 @@ public class ConfigManager {
     public double getTeleportCost()                 { return teleportCost; }
     public List<PotionEffect> getArrivalEffects()   { return arrivalEffects; }
     public Sound getArrivalSound()                  { return arrivalSound; }
-    public float getArrivalSoundVolume()            { return arrivalSoundVolume; }
-    public float getArrivalSoundPitch()             { return arrivalSoundPitch; }
+    public float getArrivalSoundVolume()            { return arrivalSound.volume(); }
+    public float getArrivalSoundPitch()             { return arrivalSound.pitch(); }
     public double getArrivalSoundRadius()           { return arrivalSoundRadius; }
     public boolean isBodyguardsEnabled()            { return bodyguardsEnabled; }
     public int getBodyguardDuration()               { return bodyguardDuration; }

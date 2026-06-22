@@ -19,13 +19,13 @@ repositories {
 
 dependencies {
     // Paper 1.21 API — provided at runtime by the server
-    compileOnly 'io.papermc.paper:paper-api:1.21-R0.1-SNAPSHOT'
+    compileOnly 'io.papermc.paper:paper-api:1.21.11-R0.1-SNAPSHOT'
 
     // Vault API — soft-depend, provided by Vault plugin at runtime
     compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
 
-    // SQLite JDBC — bundled into the plugin jar via shadow
-    implementation 'org.xerial:sqlite-jdbc:3.45.3.0'
+    // SQLite JDBC — compileOnly, loaded dynamically at runtime via PluginLoader
+    compileOnly 'org.xerial:sqlite-jdbc:3.45.3.0'
 
     // Gson is bundled with Paper, but declared for IDE resolution
     compileOnly 'com.google.code.gson:gson:2.10.1'
@@ -33,6 +33,9 @@ dependencies {
     // 3rd Party Holograms
     compileOnly 'de.oliver:FancyHolograms:2.3.3'
     compileOnly 'com.github.decentsoftware-eu:decentholograms:2.8.5'
+
+    // bStats — shaded into the final jar
+    implementation 'org.bstats:bstats-bukkit:3.0.2'
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -43,19 +46,15 @@ processResources {
     def props = [version: project.version, description: project.description]
     inputs.properties(props)
     filteringCharset = 'UTF-8'
-    filesMatching('plugin.yml') {
+    filesMatching('paper-plugin.yml') {
         expand(props)
     }
 }
 
 shadowJar {
     archiveClassifier.set('')
-    // Relocate SQLite to avoid conflicts with other plugins
-    relocate 'org.sqlite', 'me.usainsrht.basicdeathchest.libs.sqlite'
-    relocate 'org.xerial', 'me.usainsrht.basicdeathchest.libs.xerial'
-    minimize {
-        exclude(dependency('org.xerial:sqlite-jdbc:.*'))
-    }
+    // Relocate bStats to avoid conflicts with other plugins using it
+    relocate 'org.bstats', 'me.usainsrht.basicdeathchest.libs.bstats'
     mergeServiceFiles()
 }
 

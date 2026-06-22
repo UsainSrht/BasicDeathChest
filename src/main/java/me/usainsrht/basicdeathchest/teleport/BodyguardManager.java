@@ -103,8 +103,8 @@ public class BodyguardManager implements Listener {
                 }
 
                 // Max health for a proper tank
-                if (entity.getAttribute(Attribute.GENERIC_MAX_HEALTH) != null) {
-                    entity.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(100.0);
+                if (entity.getAttribute(Attribute.MAX_HEALTH) != null) {
+                    entity.getAttribute(Attribute.MAX_HEALTH).setBaseValue(100.0);
                     entity.setHealth(100.0);
                 }
             });

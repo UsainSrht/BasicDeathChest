@@ -16,6 +16,7 @@ import me.usainsrht.basicdeathchest.listener.PlayerJoinListener;
 import me.usainsrht.basicdeathchest.teleport.BodyguardManager;
 import me.usainsrht.basicdeathchest.teleport.TeleportManager;
 import me.usainsrht.basicdeathchest.util.FoliaUtil;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -104,6 +105,14 @@ public class BasicDeathChest extends JavaPlugin {
         getLogger().info("Database backend: " + configManager.getDatabaseBackend());
         if (vaultEconomy.isEnabled()) {
             getLogger().info("Vault economy: active");
+        }
+
+        // Initialize bStats metrics (shaded & relocated)
+        try {
+            new Metrics(this, 22222); // Using placeholder ID for bStats
+            getLogger().info("bStats metrics initialized.");
+        } catch (Exception e) {
+            getLogger().log(Level.WARNING, "Failed to initialize bStats metrics", e);
         }
     }
 

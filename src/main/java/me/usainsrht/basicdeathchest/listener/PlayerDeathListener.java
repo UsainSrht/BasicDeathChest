@@ -45,8 +45,12 @@ public class PlayerDeathListener implements Listener {
         org.bukkit.World world = player.getWorld();
 
         // ── Guard: keepInventory ──────────────────────────────────────────────
-        Boolean keepInv = world.getGameRuleValue(GameRule.KEEP_INVENTORY);
-        if (Boolean.TRUE.equals(keepInv)) return;
+        @SuppressWarnings("unchecked")
+        GameRule<Boolean> keepInventoryRule = (GameRule<Boolean>) org.bukkit.Registry.GAME_RULE.get(org.bukkit.NamespacedKey.minecraft("keep_inventory"));
+        if (keepInventoryRule != null) {
+            Boolean keepInv = world.getGameRuleValue(keepInventoryRule);
+            if (Boolean.TRUE.equals(keepInv)) return;
+        }
 
         // ── Guard: world whitelist ────────────────────────────────────────────
         if (!plugin.getConfigManager().isWorldAllowed(world.getName())) return;

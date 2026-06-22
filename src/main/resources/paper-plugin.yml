@@ -1,16 +1,27 @@
 name: BasicDeathChest
 version: '${version}'
 main: me.usainsrht.basicdeathchest.BasicDeathChest
+loader: me.usainsrht.basicdeathchest.PluginLoaderImpl
 description: '${description}'
 api-version: '1.21'
 folia-supported: true
 authors:
   - Usainsrht
 
-softdepend:
-  - Vault
-  - FancyHolograms
-  - DecentHolograms
+dependencies:
+  server:
+    Vault:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    FancyHolograms:
+      load: BEFORE
+      required: false
+      join-classpath: true
+    DecentHolograms:
+      load: BEFORE
+      required: false
+      join-classpath: true
 
 commands:
   deathchest:

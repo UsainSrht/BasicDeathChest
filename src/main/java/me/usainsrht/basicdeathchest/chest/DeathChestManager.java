@@ -8,6 +8,7 @@ import me.usainsrht.basicdeathchest.api.interfaces.IDeathChestManager;
 import me.usainsrht.basicdeathchest.hologram.DeathChestHologram;
 import me.usainsrht.basicdeathchest.util.FoliaUtil;
 import me.usainsrht.basicdeathchest.util.LocationUtil;
+import net.kyori.adventure.sound.Sound;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -280,21 +281,14 @@ public class DeathChestManager implements IDeathChestManager {
                type == Material.SNOW;
     }
 
-    @SuppressWarnings("deprecation")
     private void playExpiryEffects(Location loc) {
         Location center = loc.clone().add(0.5, 0.5, 0.5);
         // Visual particle
-        try {
-            Particle particle = Particle.valueOf(plugin.getConfigManager().getExpiryParticle());
-            loc.getWorld().spawnParticle(particle, center,
-                    plugin.getConfigManager().getExpiryParticleCount(), 0.5, 0.5, 0.5, 0.1);
-        } catch (IllegalArgumentException ignored) {
-            loc.getWorld().spawnParticle(Particle.EXPLOSION, center, 5);
-        }
+        Particle particle = plugin.getConfigManager().getExpiryParticle();
+        loc.getWorld().spawnParticle(particle, center,
+                plugin.getConfigManager().getExpiryParticleCount(), 0.5, 0.5, 0.5, 0.1);
         // Sound
-        loc.getWorld().playSound(center,
-                plugin.getConfigManager().getExpirySound(),
-                plugin.getConfigManager().getExpirySoundVolume(),
-                plugin.getConfigManager().getExpirySoundPitch());
+        Sound sound = plugin.getConfigManager().getExpirySound();
+        loc.getWorld().playSound(sound, center.getX(), center.getY(), center.getZ());
     }
 }
