@@ -38,6 +38,10 @@ public class TeleportManager {
         this.plugin = plugin;
     }
 
+    public void teleport(Player player, DeathEntry entry) {
+        teleport(player, entry, false);
+    }
+
     /**
      * Attempts to teleport {@code player} to the location stored in {@code entry}.
      *
@@ -47,9 +51,10 @@ public class TeleportManager {
      *
      * @param player the player to teleport
      * @param entry  the target death entry
+     * @param free   whether to bypass checks and teleport for free (admin bypass)
      */
-    public void teleport(Player player, DeathEntry entry) {
-        if (!plugin.getConfigManager().isTeleportEnabled()) {
+    public void teleport(Player player, DeathEntry entry, boolean free) {
+        if (!free && !plugin.getConfigManager().isTeleportEnabled()) {
             player.sendMessage(plugin.getMessagesManager().teleportDisabled());
             playFailureSound(player);
             return;
@@ -63,7 +68,7 @@ public class TeleportManager {
         }
 
         // Check and deduct cost
-        if (!handleCost(player))
+        if (!free && !handleCost(player))
             return;
 
         Location destination = new Location(world, entry.getX() + 0.5, entry.getY(), entry.getZ() + 0.5);

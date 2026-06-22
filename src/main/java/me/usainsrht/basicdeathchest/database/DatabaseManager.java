@@ -57,6 +57,11 @@ public interface DatabaseManager {
     void saveFreeUsesConsumed(UUID playerUUID, int count);
 
     /**
+     * Asynchronously fetches a player's UUID by their name (case-insensitive search).
+     */
+    void getPlayerUUIDByName(String name, Consumer<UUID> callback);
+
+    /**
      * Closes connections and flushes any pending writes.
      * Called on plugin disable.
      */

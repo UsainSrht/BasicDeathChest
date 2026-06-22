@@ -58,9 +58,11 @@ public class ConfigManager {
     // ── Database ─────────────────────────────────────────────────────────────
     private String databaseBackend;
     private int maxEntriesPerPlayer;
+    private boolean databaseBypassWorldFilter;
 
     // ── GUI ──────────────────────────────────────────────────────────────────
     private String guiTitle;
+    private String guiAdminTitle;
     private int guiMaxEntries;
     private Material guiEntryMaterial;
     private Material guiFillerMaterial;
@@ -158,10 +160,12 @@ public class ConfigManager {
 
         // Database
         databaseBackend = cfg.getString("database.backend", "SQLITE").toUpperCase();
-        maxEntriesPerPlayer = Math.max(1, cfg.getInt("database.max-entries-per-player", 50));
+        maxEntriesPerPlayer = cfg.getInt("database.max-entries-per-player", 50);
+        databaseBypassWorldFilter = cfg.getBoolean("database.bypass-world-filter", false);
 
         // GUI
         guiTitle = cfg.getString("gui.title", "<dark_gray>Death Locations");
+        guiAdminTitle = cfg.getString("gui.admin-title", "<dark_gray>☠ <gold>%player%'s Deaths (Page %page%/%total_pages%)</gold> ☠");
         guiMaxEntries = Math.min(45, Math.max(1, cfg.getInt("gui.max-entries", 27)));
         guiEntryMaterial = parseMaterial(cfg.getString("gui.entry-material", "COMPASS"), Material.COMPASS);
         guiFillerMaterial = parseMaterial(cfg.getString("gui.filler-material", "GRAY_STAINED_GLASS_PANE"), Material.GRAY_STAINED_GLASS_PANE);
@@ -389,7 +393,9 @@ public class ConfigManager {
     public float getHologramScaleZ()                { return hologramScaleZ; }
     public String getDatabaseBackend()              { return databaseBackend; }
     public int getMaxEntriesPerPlayer()             { return maxEntriesPerPlayer; }
+    public boolean isDatabaseBypassWorldFilter()    { return databaseBypassWorldFilter; }
     public String getGuiTitle()                     { return guiTitle; }
+    public String getAdminGuiTitle()                { return guiAdminTitle; }
     public int getGuiMaxEntries()                   { return guiMaxEntries; }
     public Material getGuiEntryMaterial()           { return guiEntryMaterial; }
     public Material getGuiFillerMaterial()          { return guiFillerMaterial; }

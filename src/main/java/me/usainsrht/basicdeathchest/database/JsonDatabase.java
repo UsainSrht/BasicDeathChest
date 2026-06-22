@@ -63,10 +63,12 @@ public class JsonDatabase implements DatabaseManager {
         List<DeathEntry> entries = data.computeIfAbsent(key, k -> new ArrayList<>());
         entries.add(0, entry); // newest first
 
-        // Prune
+        // Prune if max is positive
         int max = plugin.getConfigManager().getMaxEntriesPerPlayer();
-        while (entries.size() > max) {
-            entries.remove(entries.size() - 1);
+        if (max > 0) {
+            while (entries.size() > max) {
+                entries.remove(entries.size() - 1);
+            }
         }
         saveToDisk();
     }
@@ -122,6 +124,21 @@ public class JsonDatabase implements DatabaseManager {
     public synchronized void saveFreeUsesConsumed(UUID playerUUID, int count) {
         freeUsesData.put(playerUUID.toString(), count);
         saveFreeUsesToDisk();
+    }
+
+    @Override
+    public void getPlayerUUIDByName(String name, Consumer<UUID> callback) {
+        synchronized (this) {
+            for (List<DeathEntry> list : data.values()) {
+                for (DeathEntry entry : list) {
+                    if (entry.getPlayerName().equalsIgnoreCase(name)) {
+                        callback.accept(entry.getPlayerUUID());
+                        return;
+                    }
+                }
+            }
+        }
+        callback.accept(null);
     }
 
     @Override

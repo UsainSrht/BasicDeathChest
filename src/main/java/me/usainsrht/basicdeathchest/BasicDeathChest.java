@@ -104,10 +104,9 @@ public class BasicDeathChest extends JavaPlugin {
         this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
             final io.papermc.paper.command.brigadier.Commands commands = event.registrar();
             commands.register(
-                configManager.getCommandName(),
+                DeathChestCommand.build(this),
                 "Opens your death locations history GUI.",
-                configManager.getCommandAliases(),
-                new DeathChestCommand(this)
+                configManager.getCommandAliases()
             );
         });
 

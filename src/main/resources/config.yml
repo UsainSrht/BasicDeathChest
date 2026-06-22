@@ -83,12 +83,16 @@ hologram:
 database:
   # Backend: SQLITE, JSON
   backend: SQLITE
-  # How many death entries to keep per player.
+  # How many death entries to keep per player. Set to 0 or negative for permanent logging.
   max-entries-per-player: 50
+  # If true, deaths in worlds not allowed by the world filter will still be logged.
+  bypass-world-filter: false
 
 # ─── Death Locations GUI ─────────────────────────────────────
 gui:
   title: "<dark_gray>☠ <gold>Death Locations</gold> ☠"
+  # Title format used for the admin GUI. Supports %player%, %page%, %total_pages%
+  admin-title: "<dark_gray>☠ <gold>%player%'s Deaths (Page %page%/%total_pages%)</gold> ☠"
   # Maximum entries shown in the GUI (max 45 for a 5-row chest inventory).
   max-entries: 27
   # Material used for the entry items.

@@ -52,8 +52,13 @@ public class PlayerDeathListener implements Listener {
             if (Boolean.TRUE.equals(keepInv)) return;
         }
 
-        // ── Guard: world whitelist ────────────────────────────────────────────
-        if (!plugin.getConfigManager().isWorldAllowed(world.getName())) return;
+        // ── Guard: world allowed check ────────────────────────────────────────
+        boolean worldAllowed = plugin.getConfigManager().isWorldAllowed(world.getName());
+        boolean bypassWorldFilter = plugin.getConfigManager().isDatabaseBypassWorldFilter();
+
+        if (!worldAllowed && !bypassWorldFilter) {
+            return;
+        }
 
         // ── Guard: permission ─────────────────────────────────────────────────
         if (plugin.getConfigManager().isRequirePermission()
@@ -66,9 +71,6 @@ public class PlayerDeathListener implements Listener {
         List<ItemStack> drops = new ArrayList<>(event.getDrops());
         if (drops.isEmpty()) return;
 
-        // Clear vanilla drops — chest will contain them
-        event.getDrops().clear();
-
         // ── Handle death message mode ─────────────────────────────────────────
         handleDeathMessage(event, player);
 
@@ -80,22 +82,25 @@ public class PlayerDeathListener implements Listener {
                 System.currentTimeMillis(), cause, deathLoc);
         FoliaUtil.runAsync(plugin, () -> plugin.getDatabaseManager().saveEntry(entry));
 
-        // ── Create death chest on the region thread ───────────────────────────
-        // We are already on the correct region thread in Folia, but we schedule
-        // it for clarity and to ensure all event processing completes first.
-        final List<ItemStack> finalDrops = drops;
-        FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
-            if (!player.isConnected()) {
-                // Player disconnected before chest could be placed — drop items
-                for (ItemStack item : finalDrops) {
-                    if (item != null && !item.getType().isAir()) {
-                        deathLoc.getWorld().dropItemNaturally(deathLoc, item);
+        // ── Create death chest on the region thread if world is allowed ───────
+        if (worldAllowed) {
+            // Clear vanilla drops — chest will contain them
+            event.getDrops().clear();
+
+            final List<ItemStack> finalDrops = drops;
+            FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
+                if (!player.isConnected()) {
+                    // Player disconnected before chest could be placed — drop items
+                    for (ItemStack item : finalDrops) {
+                        if (item != null && !item.getType().isAir()) {
+                            deathLoc.getWorld().dropItemNaturally(deathLoc, item);
+                        }
                     }
+                    return;
                 }
-                return;
-            }
-            plugin.getDeathChestManager().createDeathChest(player, finalDrops);
-        });
+                plugin.getDeathChestManager().createDeathChest(player, finalDrops);
+            });
+        }
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────

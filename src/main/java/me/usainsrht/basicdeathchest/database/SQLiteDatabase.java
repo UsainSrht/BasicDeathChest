@@ -126,13 +126,15 @@ public class SQLiteDatabase implements DatabaseManager {
             ps.setInt(8, entry.getZ());
             ps.executeUpdate();
 
-            // Prune entries exceeding per-player limit
+            // Prune entries exceeding per-player limit if maxEntries is positive
             int maxEntries = plugin.getConfigManager().getMaxEntriesPerPlayer();
-            try (PreparedStatement prune = connection.prepareStatement(PRUNE_OLD)) {
-                prune.setString(1, entry.getPlayerUUID().toString());
-                prune.setString(2, entry.getPlayerUUID().toString());
-                prune.setInt(3, maxEntries);
-                prune.executeUpdate();
+            if (maxEntries > 0) {
+                try (PreparedStatement prune = connection.prepareStatement(PRUNE_OLD)) {
+                    prune.setString(1, entry.getPlayerUUID().toString());
+                    prune.setString(2, entry.getPlayerUUID().toString());
+                    prune.setInt(3, maxEntries);
+                    prune.executeUpdate();
+                }
             }
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to save death entry", e);
@@ -226,6 +228,25 @@ public class SQLiteDatabase implements DatabaseManager {
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to save free uses", e);
         }
+    }
+
+    @Override
+    public void getPlayerUUIDByName(String name, Consumer<UUID> callback) {
+        synchronized (this) {
+            try (PreparedStatement ps = connection.prepareStatement(
+                    "SELECT player_uuid FROM death_entries WHERE LOWER(player_name) = LOWER(?) LIMIT 1;")) {
+                ps.setString(1, name);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        callback.accept(UUID.fromString(rs.getString("player_uuid")));
+                        return;
+                    }
+                }
+            } catch (SQLException e) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to resolve UUID by name", e);
+            }
+        }
+        callback.accept(null);
     }
 
     @Override
