@@ -126,10 +126,22 @@ public class SQLiteDatabase implements DatabaseManager {
     @Override
     public void getEntries(UUID playerUUID, int limit, Consumer<List<DeathEntry>> callback) {
         List<DeathEntry> entries = new ArrayList<>();
+        int maxAgeHours = plugin.getConfigManager().getGuiMaxRecordAgeHours();
+        long cutoff = maxAgeHours > 0 ? (System.currentTimeMillis() - maxAgeHours * 3600000L) : 0L;
+
         synchronized (this) {
-            try (PreparedStatement ps = connection.prepareStatement(SELECT_LIMIT)) {
+            String query = cutoff > 0 ?
+                    "SELECT player_uuid, player_name, timestamp, death_cause, world, x, y, z FROM death_entries WHERE player_uuid = ? AND timestamp >= ? ORDER BY timestamp DESC LIMIT ?;" :
+                    SELECT_LIMIT;
+
+            try (PreparedStatement ps = connection.prepareStatement(query)) {
                 ps.setString(1, playerUUID.toString());
-                ps.setInt(2, limit);
+                if (cutoff > 0) {
+                    ps.setLong(2, cutoff);
+                    ps.setInt(3, limit);
+                } else {
+                    ps.setInt(2, limit);
+                }
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
                         entries.add(fromResultSet(rs));

@@ -132,7 +132,12 @@ public class BodyguardManager implements Listener {
 
                 // Update custom name with %timer% placeholder
                 double secondsLeft = remTicks / 20.0;
-                String timerStr = String.format("%.0f", Math.ceil(secondsLeft));
+                String timerStr;
+                if (updateInterval % 20 == 0) {
+                    timerStr = String.format("%.0f", Math.ceil(secondsLeft));
+                } else {
+                    timerStr = String.format(java.util.Locale.ROOT, "%.1f", secondsLeft);
+                }
                 net.kyori.adventure.text.Component nameComp = plugin.getMessagesManager().parse(nameTemplate, "timer", timerStr)
                         .decorationIfAbsent(net.kyori.adventure.text.format.TextDecoration.ITALIC, net.kyori.adventure.text.format.TextDecoration.State.FALSE);
                 bodyguard.customName(nameComp);

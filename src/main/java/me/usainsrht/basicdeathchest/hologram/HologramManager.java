@@ -106,7 +106,8 @@ public class HologramManager {
     private List<String> resolveLines(DeathChest chest) {
         List<String> templates = plugin.getConfigManager().getHologramLines();
         String playerName = chest.getOwnerName();
-        String timer = plugin.getMessagesManager().formatTimer(chest.getRemainingSeconds());
+        int intervalTicks = plugin.getConfigManager().getHologramUpdateIntervalTicks();
+        String timer = plugin.getMessagesManager().formatTimer(chest.getRemainingSecondsDouble(), intervalTicks);
         return templates.stream()
                 .map(line -> line
                         .replace("%player%", playerName)

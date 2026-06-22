@@ -96,6 +96,22 @@ gui:
   # Material used for filler/border slots.
   filler-material: GRAY_STAINED_GLASS_PANE
 
+  # Show only death records from the last X hours (e.g. 72). Set to 0 or negative to show all.
+  max-record-age-hours: 72
+
+  # Information item explaining the death system, costs, and remaining free uses.
+  info-item:
+    enabled: true
+    slot: 4
+    material: BOOK
+    name: "<gold><bold>Death System Info</bold></gold>"
+    lore:
+      - "<gray>Every time you die, a chest is spawned containing your items."
+      - "<gray>You can teleport to your death locations from this GUI."
+      - ""
+      - "<gray>Teleportation Cost: <gold>%cost% coins</gold>"
+      - "<gray>Remaining Free Uses: <green>%free_uses%</green>"
+
   # Total rows in the GUI inventory (1 to 6).
   rows: 6
 
@@ -157,6 +173,7 @@ teleport:
   cost: 100.0
 
   # Potion effects applied on arrival. Each entry: type, duration (ticks), amplifier.
+  # Optionally add: ambient (boolean), particles (boolean), icon (boolean)
   arrival-effects:
     - type: RESISTANCE
       duration: 100
@@ -170,6 +187,12 @@ teleport:
   arrival-sound-volume: 1.0
   arrival-sound-pitch: 0.8
   arrival-sound-radius: 20.0
+
+  # Sound played when teleportation fails (e.g. insufficient funds, disabled, invalid world, etc.).
+  # Set to a valid Bukkit Sound enum name, or "none" to disable.
+  failure-sound: ENTITY_VILLAGER_NO
+  failure-sound-volume: 1.0
+  failure-sound-pitch: 1.0
 
 # ─── Bodyguards ──────────────────────────────────────────────
 bodyguards:

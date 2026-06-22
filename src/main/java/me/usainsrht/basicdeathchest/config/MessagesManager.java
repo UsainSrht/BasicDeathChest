@@ -149,4 +149,32 @@ public class MessagesManager {
             return format.replace("%s%", String.valueOf(seconds));
         }
     }
+
+    /**
+     * Formats the timer using the translation strings defined in messages.yml,
+     * supporting decimal formatting if update interval is not a multiple of 20 ticks.
+     */
+    public String formatTimer(double secs, int updateIntervalTicks) {
+        if (secs < 0) {
+            return getRaw("timer-format-infinite");
+        }
+        int minutes = (int) (secs / 60);
+        double seconds = secs % 60;
+
+        String secondsStr;
+        if (minutes > 0 || updateIntervalTicks % 20 == 0) {
+            secondsStr = String.valueOf((int) Math.ceil(seconds));
+        } else {
+            secondsStr = String.format(java.util.Locale.ROOT, "%.1f", seconds);
+        }
+
+        if (minutes > 0) {
+            String format = getRaw("timer-format-minutes");
+            return format.replace("%m%", String.valueOf(minutes))
+                         .replace("%s%", secondsStr);
+        } else {
+            String format = getRaw("timer-format-seconds");
+            return format.replace("%s%", secondsStr);
+        }
+    }
 }

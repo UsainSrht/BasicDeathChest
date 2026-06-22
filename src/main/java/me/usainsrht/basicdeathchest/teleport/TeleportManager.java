@@ -49,12 +49,14 @@ public class TeleportManager {
     public void teleport(Player player, DeathEntry entry) {
         if (!plugin.getConfigManager().isTeleportEnabled()) {
             player.sendMessage(plugin.getMessagesManager().teleportDisabled());
+            playFailureSound(player);
             return;
         }
 
         World world = Bukkit.getWorld(entry.getWorld());
         if (world == null) {
             player.sendMessage(plugin.getMessagesManager().teleportWorldNotLoaded());
+            playFailureSound(player);
             return;
         }
 
@@ -66,11 +68,14 @@ public class TeleportManager {
         // Teleport on the player's entity scheduler
         FoliaUtil.runOnEntity(plugin, player, () -> {
             player.teleportAsync(destination).thenAccept(success -> {
-                if (!success) return;
+                if (!success) {
+                    playFailureSound(player);
+                    return;
+                }
                 // Post-teleport effects — schedule on the player's new region thread
                 FoliaUtil.runOnEntity(plugin, player, () -> {
                     applyArrivalEffects(player);
-                    playArrivalSound(destination);
+                    playArrivalSound(player, destination);
                     if (plugin.getConfigManager().isBodyguardsEnabled()) {
                         plugin.getBodyguardManager().spawnBodyguards(destination, player);
                     }
@@ -92,6 +97,14 @@ public class TeleportManager {
         int max = plugin.getConfigManager().getTeleportFreeUses();
         int used = freeUsesConsumed.getOrDefault(player.getUniqueId(), 0);
         return Math.max(0, max - used);
+    }
+
+    /** Plays the teleport failure sound to the player. */
+    public void playFailureSound(Player player) {
+        Sound sound = plugin.getConfigManager().getTeleportFailureSound();
+        if (sound != null) {
+            FoliaUtil.runOnEntity(plugin, player, () -> player.playSound(sound), null);
+        }
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────
@@ -124,6 +137,7 @@ public class TeleportManager {
                 player.sendMessage(plugin.getMessagesManager().teleportInsufficientFunds(
                         plugin.getVaultEconomy().format(cost),
                         plugin.getVaultEconomy().format(balance)));
+                playFailureSound(player);
                 return false;
             }
             plugin.getVaultEconomy().charge(player, cost);
@@ -139,12 +153,19 @@ public class TeleportManager {
         }
     }
 
-    private void playArrivalSound(Location location) {
+    private void playArrivalSound(Player player, Location location) {
         Sound sound = plugin.getConfigManager().getArrivalSound();
         double radius = plugin.getConfigManager().getArrivalSoundRadius();
 
+        // Play sound to the teleported player directly so they definitely hear it
+        player.playSound(sound);
+
         // Play sound at location (heard by nearby players within radius)
         location.getWorld().getNearbyPlayers(location, radius)
-                .forEach(nearby -> nearby.playSound(sound, location.getX(), location.getY(), location.getZ()));
+                .forEach(nearby -> {
+                    if (!nearby.getUniqueId().equals(player.getUniqueId())) {
+                        nearby.playSound(sound, location.getX(), location.getY(), location.getZ());
+                    }
+                });
     }
 }

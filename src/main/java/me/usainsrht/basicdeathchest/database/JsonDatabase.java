@@ -63,10 +63,21 @@ public class JsonDatabase implements DatabaseManager {
 
     @Override
     public void getEntries(UUID playerUUID, int limit, Consumer<List<DeathEntry>> callback) {
-        List<DeathEntry> result;
+        List<DeathEntry> result = new ArrayList<>();
+        int maxAgeHours = plugin.getConfigManager().getGuiMaxRecordAgeHours();
+        long cutoff = maxAgeHours > 0 ? (System.currentTimeMillis() - maxAgeHours * 3600000L) : 0L;
+
         synchronized (this) {
             List<DeathEntry> all = data.getOrDefault(playerUUID.toString(), Collections.emptyList());
-            result = new ArrayList<>(all.subList(0, Math.min(limit, all.size())));
+            for (DeathEntry entry : all) {
+                if (cutoff > 0 && entry.getTimestamp() < cutoff) {
+                    continue;
+                }
+                result.add(entry);
+                if (result.size() >= limit) {
+                    break;
+                }
+            }
         }
         callback.accept(result);
     }

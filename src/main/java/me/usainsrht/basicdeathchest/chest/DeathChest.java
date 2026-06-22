@@ -77,6 +77,13 @@ public class DeathChest implements IDeathChest {
     }
 
     @Override
+    public double getRemainingSecondsDouble() {
+        if (expiresAt < 0) return -1.0;
+        long diff = expiresAt - System.currentTimeMillis();
+        return Math.max(0.0, diff / 1000.0);
+    }
+
+    @Override
     public boolean isExpired()                    { return expired; }
 
     @Override

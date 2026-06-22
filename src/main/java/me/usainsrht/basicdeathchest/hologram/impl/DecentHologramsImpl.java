@@ -83,7 +83,8 @@ public class DecentHologramsImpl implements HologramProvider {
         private List<String> resolveInitialLines() {
             List<String> templates = plugin.getConfigManager().getHologramLines();
             String playerName = getOwningChest().getOwnerName();
-            String timer = plugin.getMessagesManager().formatTimer(getOwningChest().getRemainingSeconds());
+            int intervalTicks = plugin.getConfigManager().getHologramUpdateIntervalTicks();
+            String timer = plugin.getMessagesManager().formatTimer(getOwningChest().getRemainingSecondsDouble(), intervalTicks);
             return templates.stream()
                     .map(line -> line
                             .replace("%player%", playerName)

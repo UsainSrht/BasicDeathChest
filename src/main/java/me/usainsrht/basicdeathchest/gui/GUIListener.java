@@ -43,11 +43,13 @@ public class GUIListener implements Listener {
 
         if (!plugin.getConfigManager().isTeleportEnabled()) {
             player.sendMessage(plugin.getMessagesManager().teleportDisabled());
+            plugin.getTeleportManager().playFailureSound(player);
             return;
         }
 
         if (!player.hasPermission("basicdeathchest.teleport")) {
             player.sendMessage(plugin.getMessagesManager().noPermission());
+            plugin.getTeleportManager().playFailureSound(player);
             return;
         }
 

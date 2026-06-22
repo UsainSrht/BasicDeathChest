@@ -67,6 +67,12 @@ public class ConfigManager {
     private int guiRows;
     private Material guiNoRecordMaterial;
     private List<Integer> guiSlots;
+    private int guiMaxRecordAgeHours;
+    private boolean guiInfoEnabled;
+    private int guiInfoSlot;
+    private Material guiInfoMaterial;
+    private String guiInfoName;
+    private List<String> guiInfoLore;
 
     // ── Coordinates ──────────────────────────────────────────────────────────
     private boolean coordinatesEnabled;
@@ -82,6 +88,7 @@ public class ConfigManager {
     private double teleportCost;
     private List<PotionEffect> arrivalEffects;
     private Sound arrivalSound;
+    private Sound teleportFailureSound;
     private double arrivalSoundRadius;
 
     // ── Bodyguards ───────────────────────────────────────────────────────────
@@ -169,6 +176,22 @@ public class ConfigManager {
                 guiSlots.add(i);
             }
         }
+        guiMaxRecordAgeHours = cfg.getInt("gui.max-record-age-hours", 72);
+
+        guiInfoEnabled = cfg.getBoolean("gui.info-item.enabled", true);
+        guiInfoSlot = cfg.getInt("gui.info-item.slot", 4);
+        guiInfoMaterial = parseMaterial(cfg.getString("gui.info-item.material", "BOOK"), Material.BOOK);
+        guiInfoName = cfg.getString("gui.info-item.name", "<gold><bold>Death System Info</bold></gold>");
+        guiInfoLore = cfg.getStringList("gui.info-item.lore");
+        if (guiInfoLore == null || guiInfoLore.isEmpty()) {
+            guiInfoLore = List.of(
+                    "<gray>Every time you die, a chest is spawned containing your items.",
+                    "<gray>You can teleport to your death locations from this GUI.",
+                    "",
+                    "<gray>Teleportation Cost: <gold>%cost% coins</gold>",
+                    "<gray>Remaining Free Uses: <green>%free_uses%</green>"
+            );
+        }
 
         // Coordinates
         coordinatesEnabled = cfg.getBoolean("coordinates.enabled", true);
@@ -188,6 +211,15 @@ public class ConfigManager {
         float arrivalSoundPitch = (float) cfg.getDouble("teleport.arrival-sound-pitch", 0.8);
         arrivalSound = parseSound(cfg.getString("teleport.arrival-sound", "ENTITY_ENDER_DRAGON_GROWL"), arrivalSoundVolume, arrivalSoundPitch);
         arrivalSoundRadius = cfg.getDouble("teleport.arrival-sound-radius", 20.0);
+
+        String failureSoundName = cfg.getString("teleport.failure-sound");
+        if (failureSoundName != null && !failureSoundName.equalsIgnoreCase("none")) {
+            float failureSoundVolume = (float) cfg.getDouble("teleport.failure-sound-volume", 1.0);
+            float failureSoundPitch = (float) cfg.getDouble("teleport.failure-sound-pitch", 1.0);
+            teleportFailureSound = parseSound(failureSoundName, failureSoundVolume, failureSoundPitch);
+        } else {
+            teleportFailureSound = null;
+        }
 
         // Bodyguards
         bodyguardsEnabled = cfg.getBoolean("bodyguards.enabled", true);
@@ -302,7 +334,15 @@ public class ConfigManager {
                     plugin.getLogger().warning("Unknown potion effect type: " + typeName);
                     continue;
                 }
-                effects.add(new PotionEffect(type, duration, amplifier, true, false, false));
+
+                boolean ambient = true;
+                if (map.get("ambient") instanceof Boolean b) ambient = b;
+                boolean particles = true;
+                if (map.get("particles") instanceof Boolean b) particles = b;
+                boolean icon = true;
+                if (map.get("icon") instanceof Boolean b) icon = b;
+                
+                effects.add(new PotionEffect(type, duration, amplifier, ambient, particles, icon));
             } catch (Exception e) {
                 plugin.getLogger().log(Level.WARNING, "Failed to parse potion effect entry", e);
             }
@@ -362,6 +402,7 @@ public class ConfigManager {
     public double getTeleportCost()                 { return teleportCost; }
     public List<PotionEffect> getArrivalEffects()   { return arrivalEffects; }
     public Sound getArrivalSound()                  { return arrivalSound; }
+    public Sound getTeleportFailureSound()          { return teleportFailureSound; }
     public float getArrivalSoundVolume()            { return arrivalSound.volume(); }
     public float getArrivalSoundPitch()             { return arrivalSound.pitch(); }
     public double getArrivalSoundRadius()           { return arrivalSoundRadius; }
@@ -372,6 +413,12 @@ public class ConfigManager {
     public int getGuiRows()                         { return guiRows; }
     public Material getGuiNoRecordMaterial()        { return guiNoRecordMaterial; }
     public List<Integer> getGuiSlots()              { return guiSlots; }
+    public int getGuiMaxRecordAgeHours()            { return guiMaxRecordAgeHours; }
+    public boolean isGuiInfoEnabled()               { return guiInfoEnabled; }
+    public int getGuiInfoSlot()                     { return guiInfoSlot; }
+    public Material getGuiInfoMaterial()            { return guiInfoMaterial; }
+    public String getGuiInfoName()                  { return guiInfoName; }
+    public List<String> getGuiInfoLore()            { return guiInfoLore; }
     public org.bukkit.entity.EntityType getBodyguardMobType() { return bodyguardMobType; }
     public int getBodyguardUpdateIntervalTicks()    { return bodyguardUpdateIntervalTicks; }
     public String getBodyguardNameTemplate()        { return bodyguardNameTemplate; }

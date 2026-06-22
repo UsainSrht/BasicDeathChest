@@ -49,6 +49,17 @@ public interface IDeathChest {
     int getRemainingSeconds();
 
     /**
+     * Returns the number of seconds remaining until expiry as a double,
+     * or {@code -1.0} if the chest never expires.
+     */
+    default double getRemainingSecondsDouble() {
+        long expiresAt = getExpiresAt();
+        if (expiresAt < 0) return -1.0;
+        long diff = expiresAt - System.currentTimeMillis();
+        return Math.max(0.0, diff / 1000.0);
+    }
+
+    /**
      * Returns {@code true} if the chest has already expired and is pending removal.
      */
     boolean isExpired();

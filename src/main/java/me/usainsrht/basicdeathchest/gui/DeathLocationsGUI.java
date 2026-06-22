@@ -99,6 +99,13 @@ public class DeathLocationsGUI implements InventoryHolder {
             }
         }
 
+        if (plugin.getConfigManager().isGuiInfoEnabled()) {
+            int infoSlot = plugin.getConfigManager().getGuiInfoSlot();
+            if (infoSlot >= 0 && infoSlot < size) {
+                inventory.setItem(infoSlot, buildInfoItem());
+            }
+        }
+
         return this;
     }
 
@@ -146,6 +153,30 @@ public class DeathLocationsGUI implements InventoryHolder {
             meta.displayName(formatItemText(plugin.getMessagesManager().guiNoEntries()));
             item.setItemMeta(meta);
         }
+        return item;
+    }
+
+    private ItemStack buildInfoItem() {
+        org.bukkit.entity.Player player = Bukkit.getPlayer(viewerUUID);
+        int freeUses = player != null ? plugin.getTeleportManager().getRemainingFreeUses(player) : 0;
+        double cost = plugin.getConfigManager().getTeleportCost();
+        String formattedCost = plugin.getVaultEconomy().isEnabled() ? plugin.getVaultEconomy().format(cost) : String.valueOf(cost);
+
+        Material material = plugin.getConfigManager().getGuiInfoMaterial();
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) return item;
+
+        String name = plugin.getConfigManager().getGuiInfoName();
+        meta.displayName(formatItemText(MiniMessageUtil.parse(name, "cost", formattedCost, "free_uses", String.valueOf(freeUses))));
+
+        List<Component> lore = new ArrayList<>();
+        for (String line : plugin.getConfigManager().getGuiInfoLore()) {
+            lore.add(formatItemText(MiniMessageUtil.parse(line, "cost", formattedCost, "free_uses", String.valueOf(freeUses))));
+        }
+        meta.lore(lore);
+        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+        item.setItemMeta(meta);
         return item;
     }
 
