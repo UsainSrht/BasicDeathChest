@@ -25,8 +25,10 @@ public class JsonDatabase implements DatabaseManager {
 
     private final BasicDeathChest plugin;
     private File dataFile;
+    private File freeUsesFile;
     /** In-memory representation: UUID string → list of entries (newest first) */
     private final Map<String, List<DeathEntry>> data = new LinkedHashMap<>();
+    private final Map<String, Integer> freeUsesData = new LinkedHashMap<>();
 
     public JsonDatabase(BasicDeathChest plugin) {
         this.plugin = plugin;
@@ -44,7 +46,15 @@ public class JsonDatabase implements DatabaseManager {
             dataFile.createNewFile();
             saveToDisk();
         }
-        plugin.getLogger().info("JSON database initialised at " + dataFile.getPath());
+
+        freeUsesFile = new File(folder, "free_uses.json");
+        if (freeUsesFile.exists()) {
+            loadFreeUsesFromDisk();
+        } else {
+            freeUsesFile.createNewFile();
+            saveFreeUsesToDisk();
+        }
+        plugin.getLogger().info("JSON database initialised at " + dataFile.getPath() + " and " + freeUsesFile.getPath());
     }
 
     @Override
@@ -100,9 +110,25 @@ public class JsonDatabase implements DatabaseManager {
     }
 
     @Override
+    public void getFreeUsesConsumed(UUID playerUUID, Consumer<Integer> callback) {
+        int count;
+        synchronized (this) {
+            count = freeUsesData.getOrDefault(playerUUID.toString(), 0);
+        }
+        callback.accept(count);
+    }
+
+    @Override
+    public synchronized void saveFreeUsesConsumed(UUID playerUUID, int count) {
+        freeUsesData.put(playerUUID.toString(), count);
+        saveFreeUsesToDisk();
+    }
+
+    @Override
     public void close() {
         synchronized (this) {
             saveToDisk();
+            saveFreeUsesToDisk();
         }
         plugin.getLogger().info("JSON database flushed and closed.");
     }
@@ -157,6 +183,30 @@ public class JsonDatabase implements DatabaseManager {
             GSON.toJson(root, writer);
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to write deaths.json", e);
+        }
+    }
+
+    private void loadFreeUsesFromDisk() {
+        try (Reader reader = new InputStreamReader(new FileInputStream(freeUsesFile), StandardCharsets.UTF_8)) {
+            JsonObject root = GSON.fromJson(reader, JsonObject.class);
+            if (root == null) return;
+            for (Map.Entry<String, JsonElement> entry : root.entrySet()) {
+                freeUsesData.put(entry.getKey(), entry.getValue().getAsInt());
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to load free_uses.json", e);
+        }
+    }
+
+    private void saveFreeUsesToDisk() {
+        JsonObject root = new JsonObject();
+        for (Map.Entry<String, Integer> entry : freeUsesData.entrySet()) {
+            root.addProperty(entry.getKey(), entry.getValue());
+        }
+        try (Writer writer = new OutputStreamWriter(new FileOutputStream(freeUsesFile), StandardCharsets.UTF_8)) {
+            GSON.toJson(root, writer);
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to write free_uses.json", e);
         }
     }
 }

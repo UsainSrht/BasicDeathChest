@@ -5,9 +5,10 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
- * Handles player join logic.
+ * Handles player join and quit logic to manage cached database data.
  */
 public class PlayerJoinListener implements Listener {
 
@@ -19,9 +20,12 @@ public class PlayerJoinListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onPlayerJoin(PlayerJoinEvent event) {
-        // Nothing required on join currently.
-        // This listener is a placeholder for future join-time logic
-        // (e.g., notifying the player of expired chests, etc.)
+        plugin.getTeleportManager().loadFreeUses(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        plugin.getTeleportManager().unloadPlayer(event.getPlayer().getUniqueId());
     }
 }
 

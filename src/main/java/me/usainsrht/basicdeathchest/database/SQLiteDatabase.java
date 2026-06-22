@@ -34,9 +34,24 @@ public class SQLiteDatabase implements DatabaseManager {
             );
             """;
 
+    private static final String CREATE_FREE_USES_TABLE = """
+            CREATE TABLE IF NOT EXISTS player_free_uses (
+                player_uuid TEXT PRIMARY KEY,
+                free_uses   INTEGER NOT NULL
+            );
+            """;
+
     private static final String INSERT = """
             INSERT INTO death_entries (player_uuid, player_name, timestamp, death_cause, world, x, y, z)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            """;
+
+    private static final String SELECT_FREE_USES = """
+            SELECT free_uses FROM player_free_uses WHERE player_uuid = ?;
+            """;
+
+    private static final String REPLACE_FREE_USES = """
+            INSERT OR REPLACE INTO player_free_uses (player_uuid, free_uses) VALUES (?, ?);
             """;
 
     private static final String SELECT_LIMIT = """
@@ -93,6 +108,7 @@ public class SQLiteDatabase implements DatabaseManager {
             stmt.execute("PRAGMA journal_mode=WAL;");
             stmt.execute("PRAGMA synchronous=NORMAL;");
             stmt.execute(CREATE_TABLE);
+            stmt.execute(CREATE_FREE_USES_TABLE);
         }
         plugin.getLogger().info("SQLite database initialised at " + dbFile.getPath());
     }
@@ -180,6 +196,35 @@ public class SQLiteDatabase implements DatabaseManager {
             ps.executeUpdate();
         } catch (SQLException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to remove death entry", e);
+        }
+    }
+
+    @Override
+    public void getFreeUsesConsumed(UUID playerUUID, Consumer<Integer> callback) {
+        int count = 0;
+        synchronized (this) {
+            try (PreparedStatement ps = connection.prepareStatement(SELECT_FREE_USES)) {
+                ps.setString(1, playerUUID.toString());
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        count = rs.getInt("free_uses");
+                    }
+                }
+            } catch (SQLException e) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to retrieve free uses", e);
+            }
+        }
+        callback.accept(count);
+    }
+
+    @Override
+    public synchronized void saveFreeUsesConsumed(UUID playerUUID, int count) {
+        try (PreparedStatement ps = connection.prepareStatement(REPLACE_FREE_USES)) {
+            ps.setString(1, playerUUID.toString());
+            ps.setInt(2, count);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to save free uses", e);
         }
     }
 

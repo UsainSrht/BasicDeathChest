@@ -18,6 +18,7 @@ import me.usainsrht.basicdeathchest.teleport.TeleportManager;
 import me.usainsrht.basicdeathchest.util.FoliaUtil;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
 import me.usainsrht.basicdeathchest.command.DeathChestCommand;
@@ -112,6 +113,11 @@ public class BasicDeathChest extends JavaPlugin {
 
         // Expose public API
         DeathChestAPI.setInstance(this);
+
+        // Load free uses for currently online players (in case of reload / hot-swap)
+        for (Player player : getServer().getOnlinePlayers()) {
+            teleportManager.loadFreeUses(player.getUniqueId());
+        }
 
         getLogger().info("BasicDeathChest v" + getPluginMeta().getVersion() + " enabled.");
         getLogger().info("Hologram backend: " + configManager.getHologramBackend());

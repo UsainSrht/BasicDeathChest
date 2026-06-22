@@ -47,6 +47,16 @@ public interface DatabaseManager {
     void removeEntry(UUID playerUUID, long timestamp);
 
     /**
+     * Asynchronously fetches the number of free uses consumed by a player.
+     */
+    void getFreeUsesConsumed(UUID playerUUID, Consumer<Integer> callback);
+
+    /**
+     * Persists the number of free uses consumed by a player.
+     */
+    void saveFreeUsesConsumed(UUID playerUUID, int count);
+
+    /**
      * Closes connections and flushes any pending writes.
      * Called on plugin disable.
      */

@@ -17,21 +17,22 @@ import java.util.UUID;
 /**
  * Manages player teleportation to death locations, including:
  * <ul>
- *   <li>Vault economy cost deduction</li>
- *   <li>Free-use tracking per player</li>
- *   <li>Arrival potion effects</li>
- *   <li>Arrival sound (heard by nearby players)</li>
- *   <li>Bodyguard spawning</li>
+ * <li>Vault economy cost deduction</li>
+ * <li>Free-use tracking per player</li>
+ * <li>Arrival potion effects</li>
+ * <li>Arrival sound (heard by nearby players)</li>
+ * <li>Bodyguard spawning</li>
  * </ul>
  *
- * <p>Teleports are performed on the player's entity scheduler (Folia-safe).
+ * <p>
+ * Teleports are performed on the player's entity scheduler (Folia-safe).
  * Economy charges are applied BEFORE the teleport on the calling thread.
  */
 public class TeleportManager {
 
     private final BasicDeathChest plugin;
     /** In-memory free-use counter: UUID → number of free teleports USED. */
-    private final Map<UUID, Integer> freeUsesConsumed = new HashMap<>();
+    private final Map<UUID, Integer> freeUsesConsumed = new java.util.concurrent.ConcurrentHashMap<>();
 
     public TeleportManager(BasicDeathChest plugin) {
         this.plugin = plugin;
@@ -40,7 +41,8 @@ public class TeleportManager {
     /**
      * Attempts to teleport {@code player} to the location stored in {@code entry}.
      *
-     * <p>Must be called on the player's region thread (e.g. inside an inventory
+     * <p>
+     * Must be called on the player's region thread (e.g. inside an inventory
      * click handler or entity scheduler callback).
      *
      * @param player the player to teleport
@@ -61,7 +63,8 @@ public class TeleportManager {
         }
 
         // Check and deduct cost
-        if (!handleCost(player)) return;
+        if (!handleCost(player))
+            return;
 
         Location destination = new Location(world, entry.getX() + 0.5, entry.getY(), entry.getZ() + 0.5);
 
@@ -75,21 +78,44 @@ public class TeleportManager {
                 // Post-teleport effects — schedule on the player's new region thread
                 FoliaUtil.runOnEntity(plugin, player, () -> {
                     applyArrivalEffects(player);
-                    playArrivalSound(player, destination);
                     if (plugin.getConfigManager().isBodyguardsEnabled()) {
                         plugin.getBodyguardManager().spawnBodyguards(destination, player);
                     }
                     player.sendMessage(plugin.getMessagesManager().teleportSuccess());
+
+                    // Delay sound playing slightly to allow the client to load terrain and receive
+                    // the sound packet
+                    FoliaUtil.runDelayedOnEntity(plugin, player, () -> {
+                        playArrivalSound(player, destination);
+                    }, null, 1L);
                 }, null);
             });
         }, null);
     }
 
     /**
-     * Resets the free-use counter for a player (e.g. on server restart or explicit admin reset).
+     * Loads the free-use counter for a player from the database.
+     */
+    public void loadFreeUses(UUID playerUUID) {
+        plugin.getDatabaseManager().getFreeUsesConsumed(playerUUID, count -> {
+            freeUsesConsumed.put(playerUUID, count);
+        });
+    }
+
+    /**
+     * Unloads the free-use counter for a player to prevent memory leaks.
+     */
+    public void unloadPlayer(UUID playerUUID) {
+        freeUsesConsumed.remove(playerUUID);
+    }
+
+    /**
+     * Resets the free-use counter for a player (e.g. on server restart or explicit
+     * admin reset).
      */
     public void resetFreeUses(UUID playerUUID) {
         freeUsesConsumed.remove(playerUUID);
+        FoliaUtil.runAsync(plugin, () -> plugin.getDatabaseManager().saveFreeUsesConsumed(playerUUID, 0));
     }
 
     /** Returns how many free teleports the player has remaining. */
@@ -116,7 +142,8 @@ public class TeleportManager {
      */
     private boolean handleCost(Player player) {
         // Permission bypass
-        if (player.hasPermission("basicdeathchest.teleport.free")) return true;
+        if (player.hasPermission("basicdeathchest.teleport.free"))
+            return true;
 
         int maxFree = plugin.getConfigManager().getTeleportFreeUses();
         int used = freeUsesConsumed.getOrDefault(player.getUniqueId(), 0);
@@ -126,6 +153,8 @@ public class TeleportManager {
             int remaining = maxFree - used - 1;
             player.sendMessage(plugin.getMessagesManager().teleportFreeRemaining(
                     String.valueOf(remaining)));
+            int newUsed = used + 1;
+            FoliaUtil.runAsync(plugin, () -> plugin.getDatabaseManager().saveFreeUsesConsumed(player.getUniqueId(), newUsed));
             return true;
         }
 
