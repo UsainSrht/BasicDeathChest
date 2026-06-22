@@ -119,8 +119,22 @@ gui:
   # Total rows in the GUI inventory (1 to 6).
   rows: 6
 
-  # Material shown when a player has no death locations.
-  no-record-material: BARRIER
+  # Settings for the "no death records" item shown in GUI.
+  no-record-item:
+    material: BARRIER
+    slot: -1 # Set to -1 to automatically place in the center slot
+
+  # Pagination button customization for the Admin GUI.
+  pagination:
+    previous-button:
+      material: ARROW
+      slot-offset: 2 # Slot relative to the bottom row start (0 to 8)
+    next-button:
+      material: ARROW
+      slot-offset: 6 # Slot relative to the bottom row start (0 to 8)
+    indicator-button:
+      material: BOOK
+      slot-offset: 4 # Slot relative to the bottom row start (0 to 8)
 
   # Slots where death records will be displayed (allows custom modern designs with borders).
   # If empty or not set, it defaults to sequential slots starting from 0.
@@ -202,6 +216,8 @@ teleport:
 bodyguards:
   # Spawn 2 iron golems that defend the player from nearby hostile mobs.
   enabled: true
+  # Max health of the bodyguard entity.
+  health: 100.0
   # How many seconds the bodyguards survive before despawning.
   duration: 60
   # Number of bodyguards to spawn.

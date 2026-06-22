@@ -138,19 +138,14 @@ public class DeathChestCommand {
     }
 
     private static void sendHelp(BasicDeathChest plugin, CommandSender sender) {
-        sender.sendMessage(plugin.getMessagesManager().parse(
-                "<gold><bold>BasicDeathChest</bold></gold> <gray>v" + plugin.getPluginMeta().getVersion()));
+        sender.sendMessage(plugin.getMessagesManager().getHelpHeader(plugin.getPluginMeta().getVersion()));
         
         String cmdName = plugin.getConfigManager().getCommandName();
-        sender.sendMessage(plugin.getMessagesManager().parse(
-                "<yellow>/" + cmdName + " gui</yellow> <gray>— Open your death locations history."));
+        sender.sendMessage(plugin.getMessagesManager().getHelpGui(cmdName));
         if (sender.hasPermission(plugin.getConfigManager().getCommandAdminPermission())) {
-            sender.sendMessage(plugin.getMessagesManager().parse(
-                    "<yellow>/" + cmdName + " gui [player]</yellow> <gray>— Open another player's death history (admin)."));
-            sender.sendMessage(plugin.getMessagesManager().parse(
-                    "<yellow>/" + cmdName + " reload</yellow> <gray>— Reload configuration (admin)."));
+            sender.sendMessage(plugin.getMessagesManager().getHelpAdminGui(cmdName));
+            sender.sendMessage(plugin.getMessagesManager().getHelpReload(cmdName));
         }
-        sender.sendMessage(plugin.getMessagesManager().parse(
-                "<yellow>/" + cmdName + " info</yellow> <gray>— Show this help message."));
+        sender.sendMessage(plugin.getMessagesManager().getHelpInfo(cmdName));
     }
 }

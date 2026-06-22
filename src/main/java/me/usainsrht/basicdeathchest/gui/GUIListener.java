@@ -45,8 +45,8 @@ public class GUIListener implements Listener {
         // Check pagination controls if admin view
         if (gui.isAdminView() && size >= 18) {
             int bottomRowStart = size - 9;
-            int prevSlot = bottomRowStart + 2;
-            int nextSlot = bottomRowStart + 6;
+            int prevSlot = bottomRowStart + plugin.getConfigManager().getGuiPrevSlotOffset();
+            int nextSlot = bottomRowStart + plugin.getConfigManager().getGuiNextSlotOffset();
 
             if (slot == prevSlot && gui.getPage() > 0) {
                 gui.setPage(gui.getPage() - 1);
@@ -147,11 +147,14 @@ public class GUIListener implements Listener {
     private static void openAdminGuiForUUID(BasicDeathChest plugin, Player admin, UUID targetUUID, String targetName) {
         FoliaUtil.runAsync(plugin, () -> {
             plugin.getDatabaseManager().getAllEntries(targetUUID, entries -> {
-                FoliaUtil.runOnEntity(plugin, admin, () -> {
-                    DeathLocationsGUI gui = new DeathLocationsGUI(plugin, admin.getUniqueId(), targetUUID, targetName, entries, true);
-                    gui.buildInventory(entries);
-                    admin.openInventory(gui.getInventory());
-                }, null);
+                plugin.getDatabaseManager().getFreeUsesConsumed(targetUUID, count -> {
+                    plugin.getTeleportManager().getFreeUsesConsumedMap().put(targetUUID, count);
+                    FoliaUtil.runOnEntity(plugin, admin, () -> {
+                        DeathLocationsGUI gui = new DeathLocationsGUI(plugin, admin.getUniqueId(), targetUUID, targetName, entries, true);
+                        gui.buildInventory(entries);
+                        admin.openInventory(gui.getInventory());
+                    }, null);
+                });
             });
         });
     }

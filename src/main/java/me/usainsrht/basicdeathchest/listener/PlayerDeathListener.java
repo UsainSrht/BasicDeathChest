@@ -117,9 +117,10 @@ public class PlayerDeathListener implements Listener {
                 }
                 Location loc = player.getLocation();
                 String cause = extractCause(event);
+                String translatedCause = plugin.getMessagesManager().getTranslatedCause(cause);
                 var msg = plugin.getMessagesManager().parse(format,
                         "player", player.getName(),
-                        "cause", cause,
+                        "cause", translatedCause,
                         "x", LocationUtil.x(loc),
                         "y", LocationUtil.y(loc),
                         "z", LocationUtil.z(loc),

@@ -117,7 +117,10 @@ public class DeathLocationsGUI implements InventoryHolder {
         int endIndex = Math.min(entries.size(), startIndex + pageSize);
 
         if (entries.isEmpty()) {
-            int noRecordSlot = slots.isEmpty() ? (size / 2) : slots.get(slots.size() / 2);
+            int noRecordSlot = plugin.getConfigManager().getGuiNoRecordSlot();
+            if (noRecordSlot < 0 || noRecordSlot >= size) {
+                noRecordSlot = slots.isEmpty() ? (size / 2) : slots.get(slots.size() / 2);
+            }
             inventory.setItem(noRecordSlot, buildNoRecordItem());
         } else {
             int entryIndex = startIndex;
@@ -137,30 +140,38 @@ public class DeathLocationsGUI implements InventoryHolder {
             int totalPages = getTotalPages();
 
             // Previous Page button
-            int prevSlot = bottomRowStart + 2;
-            if (page > 0) {
-                inventory.setItem(prevSlot, buildPageButton(Material.ARROW, "<yellow>« Previous Page"));
-            } else {
-                inventory.setItem(prevSlot, createFiller(fillerMaterial));
+            int prevSlot = bottomRowStart + plugin.getConfigManager().getGuiPrevSlotOffset();
+            if (prevSlot >= 0 && prevSlot < size) {
+                if (page > 0) {
+                    inventory.setItem(prevSlot, buildPageButton(plugin.getConfigManager().getGuiPrevMaterial(), plugin.getMessagesManager().guiPreviousPage()));
+                } else {
+                    inventory.setItem(prevSlot, createFiller(fillerMaterial));
+                }
             }
 
             // Page Info button
-            int infoSlot = bottomRowStart + 4;
-            inventory.setItem(infoSlot, buildPageIndicator(page + 1, totalPages, entries.size(), startIndex + 1, endIndex));
+            int indicatorSlot = bottomRowStart + plugin.getConfigManager().getGuiIndicatorSlotOffset();
+            if (indicatorSlot >= 0 && indicatorSlot < size) {
+                inventory.setItem(indicatorSlot, buildPageIndicator(page + 1, totalPages, entries.size(), startIndex + 1, endIndex));
+            }
 
             // Next Page button
-            int nextSlot = bottomRowStart + 6;
-            if (page < totalPages - 1) {
-                inventory.setItem(nextSlot, buildPageButton(Material.ARROW, "Next Page »"));
-            } else {
-                inventory.setItem(nextSlot, createFiller(fillerMaterial));
+            int nextSlot = bottomRowStart + plugin.getConfigManager().getGuiNextSlotOffset();
+            if (nextSlot >= 0 && nextSlot < size) {
+                if (page < totalPages - 1) {
+                    inventory.setItem(nextSlot, buildPageButton(plugin.getConfigManager().getGuiNextMaterial(), plugin.getMessagesManager().guiNextPage()));
+                } else {
+                    inventory.setItem(nextSlot, createFiller(fillerMaterial));
+                }
             }
         }
 
-        if (!isAdminView && plugin.getConfigManager().isGuiInfoEnabled()) {
+        if (plugin.getConfigManager().isGuiInfoEnabled()) {
             int infoSlot = plugin.getConfigManager().getGuiInfoSlot();
             if (infoSlot >= 0 && infoSlot < size) {
-                inventory.setItem(infoSlot, buildInfoItem());
+                if (!isAdminView || (size < 18 || infoSlot < size - 9)) {
+                    inventory.setItem(infoSlot, buildInfoItem());
+                }
             }
         }
 
@@ -184,7 +195,7 @@ public class DeathLocationsGUI implements InventoryHolder {
                 "world", entry.getWorld())));
         lore.add(formatItemText(MiniMessageUtil.parse(
                 plugin.getMessagesManager().getRaw("gui-entry-lore-cause"),
-                "cause", entry.getFormattedCause())));
+                "cause", plugin.getMessagesManager().getTranslatedCause(entry.getDeathCause()))));
         lore.add(formatItemText(MiniMessageUtil.parse(
                 plugin.getMessagesManager().getRaw("gui-entry-lore-coords"),
                 "x", String.valueOf(entry.getX()),
@@ -209,14 +220,18 @@ public class DeathLocationsGUI implements InventoryHolder {
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.displayName(formatItemText(plugin.getMessagesManager().guiNoEntries()));
+            List<Component> lore = new ArrayList<>();
+            for (String line : plugin.getMessagesManager().guiNoEntriesLore()) {
+                lore.add(formatItemText(MiniMessageUtil.parse(line)));
+            }
+            meta.lore(lore);
             item.setItemMeta(meta);
         }
         return item;
     }
 
     private ItemStack buildInfoItem() {
-        org.bukkit.entity.Player player = Bukkit.getPlayer(viewerUUID);
-        int freeUses = player != null ? plugin.getTeleportManager().getRemainingFreeUses(player) : 0;
+        int freeUses = plugin.getTeleportManager().getRemainingFreeUses(targetUUID);
         double cost = plugin.getConfigManager().getTeleportCost();
         String formattedCost = plugin.getVaultEconomy().isEnabled() ? plugin.getVaultEconomy().format(cost) : String.valueOf(cost);
 
@@ -253,27 +268,31 @@ public class DeathLocationsGUI implements InventoryHolder {
         return component.decorationIfAbsent(net.kyori.adventure.text.format.TextDecoration.ITALIC, net.kyori.adventure.text.format.TextDecoration.State.FALSE);
     }
 
-    private ItemStack buildPageButton(Material material, String name) {
+    private ItemStack buildPageButton(Material material, Component displayName) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(formatItemText(MiniMessageUtil.parse(name)));
+            meta.displayName(formatItemText(displayName));
             item.setItemMeta(meta);
         }
         return item;
     }
 
     private ItemStack buildPageIndicator(int current, int total, int totalRecords, int start, int end) {
-        ItemStack item = new ItemStack(Material.BOOK);
+        Material material = plugin.getConfigManager().getGuiIndicatorMaterial();
+        ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(formatItemText(MiniMessageUtil.parse("<gold>Page " + current + " of " + total)));
+            meta.displayName(formatItemText(plugin.getMessagesManager().guiPageIndicatorName(String.valueOf(current), String.valueOf(total))));
             List<Component> lore = new ArrayList<>();
-            lore.add(formatItemText(MiniMessageUtil.parse("<gray>Total Records: <white>" + totalRecords)));
             if (totalRecords > 0) {
-                lore.add(formatItemText(MiniMessageUtil.parse("<gray>Showing: <white>" + start + " - " + end)));
+                for (Component comp : plugin.getMessagesManager().guiPageIndicatorLore(String.valueOf(totalRecords), String.valueOf(start), String.valueOf(end))) {
+                    lore.add(formatItemText(comp));
+                }
             } else {
-                lore.add(formatItemText(MiniMessageUtil.parse("<gray>Showing: <white>0")));
+                for (Component comp : plugin.getMessagesManager().guiPageIndicatorLoreEmpty()) {
+                    lore.add(formatItemText(comp));
+                }
             }
             meta.lore(lore);
             item.setItemMeta(meta);

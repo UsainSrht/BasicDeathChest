@@ -123,10 +123,20 @@ public class TeleportManager {
         FoliaUtil.runAsync(plugin, () -> plugin.getDatabaseManager().saveFreeUsesConsumed(playerUUID, 0));
     }
 
+    /** Returns the map of free uses consumed per player UUID. */
+    public Map<UUID, Integer> getFreeUsesConsumedMap() {
+        return freeUsesConsumed;
+    }
+
     /** Returns how many free teleports the player has remaining. */
     public int getRemainingFreeUses(Player player) {
+        return getRemainingFreeUses(player.getUniqueId());
+    }
+
+    /** Returns how many free teleports the player with the given UUID has remaining. */
+    public int getRemainingFreeUses(UUID uuid) {
         int max = plugin.getConfigManager().getTeleportFreeUses();
-        int used = freeUsesConsumed.getOrDefault(player.getUniqueId(), 0);
+        int used = freeUsesConsumed.getOrDefault(uuid, 0);
         return Math.max(0, max - used);
     }
 

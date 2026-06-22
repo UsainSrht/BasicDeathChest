@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.logging.Level;
 
 /**
@@ -106,8 +107,72 @@ public class MessagesManager {
         return get("chest-expired", "x", x, "y", y, "z", z);
     }
 
-    public Component guiNoEntries()                   { return get("gui-no-entries"); }
+    public Component guiNoEntries()                   { return getRawComponent("gui-no-entries"); }
+    public List<String> guiNoEntriesLore() {
+        return cfg.getStringList("gui-no-entries-lore");
+    }
     public Component guiEntryName(String index)       { return getRawComponent("gui-entry-name", "index", index); }
+
+    public Component guiPreviousPage() {
+        return getRawComponent("gui-previous-page");
+    }
+
+    public Component guiNextPage() {
+        return getRawComponent("gui-next-page");
+    }
+
+    public Component guiPageIndicatorName(String current, String total) {
+        return getRawComponent("gui-page-indicator-name", "current", current, "total", total);
+    }
+
+    public List<Component> guiPageIndicatorLore(String totalRecords, String start, String end) {
+        List<Component> list = new java.util.ArrayList<>();
+        for (String line : cfg.getStringList("gui-page-indicator-lore")) {
+            list.add(MiniMessageUtil.parse(line, "total_records", totalRecords, "start", start, "end", end));
+        }
+        return list;
+    }
+
+    public List<Component> guiPageIndicatorLoreEmpty() {
+        List<Component> list = new java.util.ArrayList<>();
+        for (String line : cfg.getStringList("gui-page-indicator-lore-empty")) {
+            list.add(MiniMessageUtil.parse(line));
+        }
+        return list;
+    }
+
+    public Component getHelpHeader(String version) {
+        return getRawComponent("help-header", "version", version);
+    }
+
+    public Component getHelpGui(String cmd) {
+        return getRawComponent("help-gui", "cmd", cmd);
+    }
+
+    public Component getHelpAdminGui(String cmd) {
+        return getRawComponent("help-admin-gui", "cmd", cmd);
+    }
+
+    public Component getHelpReload(String cmd) {
+        return getRawComponent("help-reload", "cmd", cmd);
+    }
+
+    public Component getHelpInfo(String cmd) {
+        return getRawComponent("help-info", "cmd", cmd);
+    }
+
+    public String getTranslatedCause(String deathCause) {
+        if (deathCause == null || deathCause.isEmpty()) {
+            return cfg.getString("death-reasons.UNKNOWN", "Unknown");
+        }
+        String key = "death-reasons." + deathCause.toUpperCase();
+        if (cfg.contains(key)) {
+            return cfg.getString(key);
+        }
+        // Fallback to default formatting if not translated
+        String lowered = deathCause.replace('_', ' ').toLowerCase();
+        return Character.toUpperCase(lowered.charAt(0)) + lowered.substring(1);
+    }
 
     public Component teleportDisabled()               { return get("teleport-disabled"); }
     public Component teleportSuccess()                { return get("teleport-success"); }

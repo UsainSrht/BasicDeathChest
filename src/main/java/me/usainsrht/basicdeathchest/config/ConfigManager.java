@@ -68,6 +68,7 @@ public class ConfigManager {
     private Material guiFillerMaterial;
     private int guiRows;
     private Material guiNoRecordMaterial;
+    private int guiNoRecordSlot;
     private List<Integer> guiSlots;
     private int guiMaxRecordAgeHours;
     private boolean guiInfoEnabled;
@@ -75,6 +76,14 @@ public class ConfigManager {
     private Material guiInfoMaterial;
     private String guiInfoName;
     private List<String> guiInfoLore;
+    
+    // ── Pagination buttons ──────────────────────────────────────────────────
+    private Material guiPrevMaterial;
+    private int guiPrevSlotOffset;
+    private Material guiNextMaterial;
+    private int guiNextSlotOffset;
+    private Material guiIndicatorMaterial;
+    private int guiIndicatorSlotOffset;
 
     // ── Coordinates ──────────────────────────────────────────────────────────
     private boolean coordinatesEnabled;
@@ -95,6 +104,7 @@ public class ConfigManager {
 
     // ── Bodyguards ───────────────────────────────────────────────────────────
     private boolean bodyguardsEnabled;
+    private double bodyguardHealth;
     private int bodyguardDuration;
     private int bodyguardCount;
     private org.bukkit.entity.EntityType bodyguardMobType;
@@ -170,7 +180,19 @@ public class ConfigManager {
         guiEntryMaterial = parseMaterial(cfg.getString("gui.entry-material", "COMPASS"), Material.COMPASS);
         guiFillerMaterial = parseMaterial(cfg.getString("gui.filler-material", "GRAY_STAINED_GLASS_PANE"), Material.GRAY_STAINED_GLASS_PANE);
         guiRows = Math.min(6, Math.max(1, cfg.getInt("gui.rows", 6)));
-        guiNoRecordMaterial = parseMaterial(cfg.getString("gui.no-record-material", "BARRIER"), Material.BARRIER);
+        
+        // No record item
+        guiNoRecordMaterial = parseMaterial(cfg.getString("gui.no-record-item.material", "BARRIER"), Material.BARRIER);
+        guiNoRecordSlot = cfg.getInt("gui.no-record-item.slot", -1);
+        
+        // Pagination
+        guiPrevMaterial = parseMaterial(cfg.getString("gui.pagination.previous-button.material", "ARROW"), Material.ARROW);
+        guiPrevSlotOffset = cfg.getInt("gui.pagination.previous-button.slot-offset", 2);
+        guiNextMaterial = parseMaterial(cfg.getString("gui.pagination.next-button.material", "ARROW"), Material.ARROW);
+        guiNextSlotOffset = cfg.getInt("gui.pagination.next-button.slot-offset", 6);
+        guiIndicatorMaterial = parseMaterial(cfg.getString("gui.pagination.indicator-button.material", "BOOK"), Material.BOOK);
+        guiIndicatorSlotOffset = cfg.getInt("gui.pagination.indicator-button.slot-offset", 4);
+
         List<Integer> rawSlots = cfg.getIntegerList("gui.slots");
         guiSlots = rawSlots != null ? new ArrayList<>(rawSlots) : new ArrayList<>();
         int maxSlotIndex = guiRows * 9;
@@ -227,6 +249,7 @@ public class ConfigManager {
 
         // Bodyguards
         bodyguardsEnabled = cfg.getBoolean("bodyguards.enabled", true);
+        bodyguardHealth = cfg.getDouble("bodyguards.health", 100.0);
         bodyguardDuration = Math.max(1, cfg.getInt("bodyguards.duration", 60));
         bodyguardCount = Math.max(1, Math.min(10, cfg.getInt("bodyguards.count", 2)));
         String mobTypeName = cfg.getString("bodyguards.type", "IRON_GOLEM");
@@ -428,6 +451,15 @@ public class ConfigManager {
     public org.bukkit.entity.EntityType getBodyguardMobType() { return bodyguardMobType; }
     public int getBodyguardUpdateIntervalTicks()    { return bodyguardUpdateIntervalTicks; }
     public String getBodyguardNameTemplate()        { return bodyguardNameTemplate; }
+    public double getBodyguardHealth()              { return bodyguardHealth; }
+
+    public int getGuiNoRecordSlot()                 { return guiNoRecordSlot; }
+    public Material getGuiPrevMaterial()            { return guiPrevMaterial; }
+    public int getGuiPrevSlotOffset()               { return guiPrevSlotOffset; }
+    public Material getGuiNextMaterial()            { return guiNextMaterial; }
+    public int getGuiNextSlotOffset()               { return guiNextSlotOffset; }
+    public Material getGuiIndicatorMaterial()       { return guiIndicatorMaterial; }
+    public int getGuiIndicatorSlotOffset()          { return guiIndicatorSlotOffset; }
 
     public String getCommandName()                  { return commandName; }
     public List<String> getCommandAliases()         { return commandAliases; }

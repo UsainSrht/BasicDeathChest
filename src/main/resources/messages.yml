@@ -24,12 +24,26 @@ chest-expired: "<yellow>Your death chest at <white>%x%<yellow>, <white>%y%<yello
 
 # ─── GUI ─────────────────────────────────────────────────────
 gui-no-entries: "<yellow>You have no recorded death locations yet."
+gui-no-entries-lore:
+  - "<gray>Go explore the world!"
+  - "<gray>Your deaths will be saved here."
 gui-entry-name: "<red>☠ <white>Death #%index%"
 gui-entry-lore-world: "<gray>World: <white>%world%"
 gui-entry-lore-cause: "<gray>Cause: <red>%cause%"
 gui-entry-lore-coords: "<gray>Location: <white>%x%<gray>, <white>%y%<gray>, <white>%z%"
 gui-entry-lore-time: "<gray>Time: <white>%time%"
 gui-entry-lore-click: "<yellow>Click to teleport!"
+
+# ─── Pagination Buttons ──────────────────────────────────────
+gui-previous-page: "<yellow>« Previous Page"
+gui-next-page: "Next Page »"
+gui-page-indicator-name: "<gold>Page %current% of %total%"
+gui-page-indicator-lore:
+  - "<gray>Total Records: <white>%total_records%"
+  - "<gray>Showing: <white>%start% - %end%"
+gui-page-indicator-lore-empty:
+  - "<gray>Total Records: <white>0"
+  - "<gray>Showing: <white>0"
 
 # ─── Teleportation ───────────────────────────────────────────
 teleport-disabled: "<red>Teleportation to death locations is disabled."
@@ -57,3 +71,42 @@ timer-format-minutes: "<yellow>%m%m %s%s"
 # ─── Admin ───────────────────────────────────────────────────
 admin-chest-removed: "<green>Death chest at %location% removed."
 admin-reload-start: "<gray>Reloading BasicDeathChest..."
+
+# ─── Help Messages ───────────────────────────────────────────
+help-header: "<gold><bold>BasicDeathChest</bold></gold> <gray>v%version%"
+help-gui: "<yellow>/%cmd% gui</yellow> <gray>— Open your death locations history."
+help-admin-gui: "<yellow>/%cmd% gui [player]</yellow> <gray>— Open another player's death history (admin)."
+help-reload: "<yellow>/%cmd% reload</yellow> <gray>— Reload configuration (admin)."
+help-info: "<yellow>/%cmd% info</yellow> <gray>— Show this help message."
+
+# ─── Death Reasons ───────────────────────────────────────────
+death-reasons:
+  CONTACT: "Contact"
+  ENTITY_ATTACK: "Entity Attack"
+  PROJECTILE: "Projectile"
+  SUFFOCATION: "Suffocation"
+  FALL: "Fall Damage"
+  FIRE: "Fire"
+  FIRE_TICK: "Burning"
+  MELTING: "Melting"
+  LAVA: "Lava"
+  DROWNING: "Drowning"
+  BLOCK_EXPLOSION: "Explosion"
+  ENTITY_EXPLOSION: "Entity Explosion"
+  VOID: "Void"
+  LIGHTNING: "Lightning"
+  SUICIDE: "Suicide"
+  STARVATION: "Starvation"
+  POISON: "Poison"
+  WITHER: "Wither Effect"
+  FALLING_BLOCK: "Falling Block"
+  THORNS: "Thorns"
+  DRAGON_BREATH: "Dragon Breath"
+  CUSTOM: "Custom"
+  FLY_INTO_WALL: "Kinetic Energy"
+  HOT_FLOOR: "Magma"
+  CRAMMING: "Cramming"
+  DRYOUT: "Dryout"
+  FREEZE: "Freezing"
+  SONIC_BOOM: "Sonic Boom"
+  UNKNOWN: "Unknown"
