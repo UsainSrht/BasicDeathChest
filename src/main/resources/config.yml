@@ -184,4 +184,20 @@ bodyguards:
   # How often (in ticks) to update the bodyguard name timer.
   update-interval-ticks: 20
   # Custom name template with %timer% placeholder.
-  name: "<green>%timer%s remaining"
+  name: "<green>%timer%s"
+
+# ─── Command Settings ─────────────────────────────────────────
+command:
+  # The name of the primary command. Changing this requires a server restart/reload to take effect.
+  name: "deathchest"
+  # Aliases for the command. Changing these requires a server restart/reload to take effect.
+  aliases:
+    - "bdc"
+    - "death"
+  # The permission required to run the main command (and view it in tab-completion).
+  permission: "basicdeathchest.use"
+  # The permission required to run the gui/history subcommands.
+  gui-permission: "basicdeathchest.gui"
+  # The permission required to run the reload subcommand.
+  admin-permission: "basicdeathchest.admin"
+

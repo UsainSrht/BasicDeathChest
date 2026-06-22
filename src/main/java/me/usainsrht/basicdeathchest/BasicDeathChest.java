@@ -19,6 +19,8 @@ import me.usainsrht.basicdeathchest.util.FoliaUtil;
 import org.bstats.bukkit.Metrics;
 import org.bukkit.NamespacedKey;
 import org.bukkit.plugin.java.JavaPlugin;
+import io.papermc.paper.plugin.lifecycle.event.types.LifecycleEvents;
+import me.usainsrht.basicdeathchest.command.DeathChestCommand;
 
 import java.util.logging.Level;
 
@@ -97,6 +99,17 @@ public class BasicDeathChest extends JavaPlugin {
         pm.registerEvents(new GUIListener(this), this);
         pm.registerEvents(bodyguardManager, this);   // BodyguardManager is also a Listener
 
+        // Register command via modern Paper Brigadier Command API
+        this.getLifecycleManager().registerEventHandler(LifecycleEvents.COMMANDS, event -> {
+            final io.papermc.paper.command.brigadier.Commands commands = event.registrar();
+            commands.register(
+                configManager.getCommandName(),
+                "Opens your death locations history GUI.",
+                configManager.getCommandAliases(),
+                new DeathChestCommand(this)
+            );
+        });
+
         // Expose public API
         DeathChestAPI.setInstance(this);
 
@@ -135,7 +148,7 @@ public class BasicDeathChest extends JavaPlugin {
 
         // Close database
         if (databaseManager != null) {
-            FoliaUtil.runAsync(this, () -> databaseManager.close());
+            databaseManager.close();
         }
 
         getLogger().info("BasicDeathChest disabled.");

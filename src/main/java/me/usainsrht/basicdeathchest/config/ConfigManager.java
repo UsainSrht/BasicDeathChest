@@ -92,6 +92,13 @@ public class ConfigManager {
     private int bodyguardUpdateIntervalTicks;
     private String bodyguardNameTemplate;
 
+    // ── Command settings ─────────────────────────────────────────────────────
+    private String commandName;
+    private List<String> commandAliases;
+    private String commandPermission;
+    private String commandGuiPermission;
+    private String commandAdminPermission;
+
     // ─────────────────────────────────────────────────────────────────────────
 
     public ConfigManager(BasicDeathChest plugin) {
@@ -195,6 +202,14 @@ public class ConfigManager {
         }
         bodyguardUpdateIntervalTicks = Math.max(1, cfg.getInt("bodyguards.update-interval-ticks", 20));
         bodyguardNameTemplate = cfg.getString("bodyguards.name", "<green>%timer%s remaining");
+
+        // Command settings
+        commandName = cfg.getString("command.name", "deathchest");
+        commandAliases = cfg.getStringList("command.aliases");
+        if (commandAliases == null) commandAliases = List.of("dc", "bdc", "death");
+        commandPermission = cfg.getString("command.permission", "basicdeathchest.use");
+        commandGuiPermission = cfg.getString("command.gui-permission", "basicdeathchest.gui");
+        commandAdminPermission = cfg.getString("command.admin-permission", "basicdeathchest.admin");
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -273,7 +288,13 @@ public class ConfigManager {
                 if (typeName != null) {
                     NamespacedKey key = NamespacedKey.fromString(typeName.toLowerCase());
                     if (key != null) {
-                        type = Registry.POTION_EFFECT_TYPE.get(key);
+                        type = Registry.EFFECT.get(key);
+                        if (type == null) {
+                            type = PotionEffectType.getByKey(key);
+                        }
+                    }
+                    if (type == null) {
+                        type = PotionEffectType.getByName(typeName.toUpperCase());
                     }
                 }
                 
@@ -354,4 +375,10 @@ public class ConfigManager {
     public org.bukkit.entity.EntityType getBodyguardMobType() { return bodyguardMobType; }
     public int getBodyguardUpdateIntervalTicks()    { return bodyguardUpdateIntervalTicks; }
     public String getBodyguardNameTemplate()        { return bodyguardNameTemplate; }
+
+    public String getCommandName()                  { return commandName; }
+    public List<String> getCommandAliases()         { return commandAliases; }
+    public String getCommandPermission()            { return commandPermission; }
+    public String getCommandGuiPermission()         { return commandGuiPermission; }
+    public String getCommandAdminPermission()        { return commandAdminPermission; }
 }

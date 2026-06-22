@@ -23,13 +23,6 @@ dependencies:
       required: false
       join-classpath: true
 
-commands:
-  deathchest:
-    description: Opens your death locations history GUI.
-    usage: /deathchest [gui|reload|info]
-    aliases: [ dc, bdc, death ]
-    permission: basicdeathchest.use
-
 permissions:
   basicdeathchest.use:
     description: Allows the player to have a death chest spawned and access basic commands.
