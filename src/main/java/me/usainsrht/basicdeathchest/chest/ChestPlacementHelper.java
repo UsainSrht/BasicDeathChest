@@ -8,6 +8,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 
+import org.bukkit.Bukkit;
+import me.usainsrht.basicdeathchest.util.WorldGuardWrapper;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,16 +20,19 @@ import java.util.List;
  *
  * <h3>Placement algorithm</h3>
  * <ol>
- *   <li>Place the primary container at the death location.</li>
- *   <li>If items overflow, try to form a double-chest (for CHEST/TRAPPED_CHEST)
- *       by checking NORTH → SOUTH → WEST → EAST for an air block.</li>
- *   <li>If no horizontal air is found, check UP.</li>
- *   <li>If all adjacent positions are occupied, check {@link #canBreak(Block, Player)}.
- *       If true, break the obstructing block and place there.</li>
- *   <li>Any items that still don't fit are dropped naturally.</li>
+ * <li>Place the primary container at the death location.</li>
+ * <li>If items overflow, try to form a double-chest (for CHEST/TRAPPED_CHEST)
+ * by checking NORTH → SOUTH → WEST → EAST for an air block.</li>
+ * <li>If no horizontal air is found, check UP.</li>
+ * <li>If all adjacent positions are occupied, check
+ * {@link #canBreak(Block, Player)}.
+ * If true, break the obstructing block and place there.</li>
+ * <li>Any items that still don't fit are dropped naturally.</li>
  * </ol>
  *
- * <p>All methods must be called on the region thread that owns the target location.
+ * <p>
+ * All methods must be called on the region thread that owns the target
+ * location.
  */
 public class ChestPlacementHelper {
 
@@ -47,7 +53,8 @@ public class ChestPlacementHelper {
      * Places one or more container blocks starting at {@code origin} and fills them
      * with {@code items}. Returns the resulting {@link DeathChest} model.
      *
-     * <p>Items that cannot fit in any container are dropped naturally.
+     * <p>
+     * Items that cannot fit in any container are dropped naturally.
      *
      * @param player the player who died (used for permission checks)
      * @param origin the block at which to place the first container
@@ -72,10 +79,44 @@ public class ChestPlacementHelper {
 
         if (!overflow.isEmpty()) {
             // Try to place a second container for overflow
-            Block secondary = findSecondaryBlock(origin, player, type);
+            BlockFace foundFace = null;
+            Block secondary = null;
+            if (isChestLike(type)) {
+                for (BlockFace face : HORIZONTAL_FACES) {
+                    Block candidate = origin.getRelative(face);
+                    if (candidate.getType().isAir()) {
+                        secondary = candidate;
+                        foundFace = face;
+                        break;
+                    }
+                    if (canBreak(candidate, player)) {
+                        candidate.setType(Material.AIR);
+                        secondary = candidate;
+                        foundFace = face;
+                        break;
+                    }
+                }
+            }
+
+            if (secondary == null) {
+                // Check UP
+                Block above = origin.getRelative(BlockFace.UP);
+                if (above.getType().isAir()) {
+                    secondary = above;
+                } else if (canBreak(above, player)) {
+                    above.setType(Material.AIR);
+                    secondary = above;
+                }
+            }
+
             if (secondary != null) {
                 placeContainer(secondary, type, title, player.getUniqueId().toString());
                 chest.addLocation(secondary.getLocation());
+
+                // If side by side chest, connect them!
+                if (foundFace != null && isChestLike(type)) {
+                    setChestBlockData(origin, secondary, foundFace, player);
+                }
 
                 Inventory secondaryInv = getInventory(secondary);
                 List<ItemStack> stillOverflow = fillInventory(secondaryInv, overflow);
@@ -100,7 +141,8 @@ public class ChestPlacementHelper {
      * Determines whether the plugin is allowed to break {@code block} on behalf
      * of {@code player} in order to make room for a death chest container.
      *
-     * <p><strong>Implementation note:</strong> This method is intentionally left
+     * <p>
+     * <strong>Implementation note:</strong> This method is intentionally left
      * as a stub returning {@code false} (safe default — never break blocks).
      * External plugins can override this behaviour by listening to
      * {@link me.usainsrht.basicdeathchest.api.events.DeathChestCreateEvent} or by
@@ -112,11 +154,81 @@ public class ChestPlacementHelper {
      * @return {@code true} if the block may be broken; {@code false} otherwise
      */
     public boolean canBreak(Block block, Player player) {
-        // Stub — always deny by default
-        return false;
+        if (block.getType().getHardness() < 0) {
+            return false;
+        }
+        if (!player.hasPermission("basicdeathchest.break")) {
+            return false;
+        }
+        if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
+            return WorldGuardWrapper.canBuild(player, block.getLocation());
+        }
+        return true;
     }
 
     // ─── Private helpers ──────────────────────────────────────────────────────
+
+    private void setChestBlockData(Block origin, Block secondary, BlockFace face, Player player) {
+        if (!(origin.getBlockData() instanceof org.bukkit.block.data.type.Chest) ||
+            !(secondary.getBlockData() instanceof org.bukkit.block.data.type.Chest)) {
+            return;
+        }
+
+        BlockFace facing;
+        org.bukkit.block.data.type.Chest.Type originType;
+        org.bukkit.block.data.type.Chest.Type secondaryType;
+
+        BlockFace pf = player.getFacing();
+        if (face == BlockFace.NORTH || face == BlockFace.SOUTH) {
+            facing = (pf == BlockFace.WEST) ? BlockFace.WEST : BlockFace.EAST;
+            if (facing == BlockFace.WEST) {
+                if (face == BlockFace.NORTH) {
+                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                }
+            } else { // EAST
+                if (face == BlockFace.NORTH) {
+                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                }
+            }
+        } else { // EAST or WEST
+            facing = (pf == BlockFace.SOUTH) ? BlockFace.SOUTH : BlockFace.NORTH;
+            if (facing == BlockFace.NORTH) {
+                if (face == BlockFace.EAST) {
+                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                }
+            } else { // SOUTH
+                if (face == BlockFace.EAST) {
+                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                }
+            }
+        }
+
+        var originData = (org.bukkit.block.data.type.Chest) origin.getBlockData();
+        originData.setFacing(facing);
+        originData.setType(originType);
+        origin.setBlockData(originData, false);
+
+        var secondaryData = (org.bukkit.block.data.type.Chest) secondary.getBlockData();
+        secondaryData.setFacing(facing);
+        secondaryData.setType(secondaryType);
+        secondary.setBlockData(secondaryData, false);
+    }
 
     private void placeContainer(Block block, Material type, String resolvedTitle, String ownerUUID) {
         block.setType(type, false); // Don't apply physics immediately
@@ -156,39 +268,12 @@ public class ChestPlacementHelper {
     private List<ItemStack> fillInventory(Inventory inventory, List<ItemStack> items) {
         List<ItemStack> overflow = new ArrayList<>();
         for (ItemStack item : items) {
-            if (item == null || item.getType().isAir()) continue;
+            if (item == null || item.getType().isAir())
+                continue;
             var result = inventory.addItem(item);
             overflow.addAll(result.values());
         }
         return overflow;
-    }
-
-    /**
-     * Finds a suitable block for a secondary container.
-     * Priority: horizontal faces, then UP.
-     */
-    private Block findSecondaryBlock(Block origin, Player player, Material type) {
-        // Check horizontal adjacents (for double-chest logic)
-        if (isChestLike(type)) {
-            for (BlockFace face : HORIZONTAL_FACES) {
-                Block candidate = origin.getRelative(face);
-                if (candidate.getType().isAir()) return candidate;
-                if (canBreak(candidate, player)) {
-                    candidate.setType(Material.AIR);
-                    return candidate;
-                }
-            }
-        }
-
-        // Check UP
-        Block above = origin.getRelative(BlockFace.UP);
-        if (above.getType().isAir()) return above;
-        if (canBreak(above, player)) {
-            above.setType(Material.AIR);
-            return above;
-        }
-
-        return null;
     }
 
     private boolean isChestLike(Material type) {

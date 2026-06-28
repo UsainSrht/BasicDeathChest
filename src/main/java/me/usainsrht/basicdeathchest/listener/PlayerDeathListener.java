@@ -69,7 +69,6 @@ public class PlayerDeathListener implements Listener {
 
         // ── Capture drops ─────────────────────────────────────────────────────
         List<ItemStack> drops = new ArrayList<>(event.getDrops());
-        if (drops.isEmpty()) return;
 
         // ── Handle death message mode ─────────────────────────────────────────
         handleDeathMessage(event, player);
@@ -82,8 +81,8 @@ public class PlayerDeathListener implements Listener {
                 System.currentTimeMillis(), cause, deathLoc);
         FoliaUtil.runAsync(plugin, () -> plugin.getDatabaseManager().saveEntry(entry));
 
-        // ── Create death chest on the region thread if world is allowed ───────
-        if (worldAllowed) {
+        // ── Create death chest on the region thread if world is allowed and drops are not empty ───
+        if (worldAllowed && !drops.isEmpty()) {
             // Clear vanilla drops — chest will contain them
             event.getDrops().clear();
 

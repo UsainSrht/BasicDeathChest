@@ -128,9 +128,16 @@ public class ChestProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClose(InventoryCloseEvent event) {
         Inventory inv = event.getInventory();
-        if (!(inv.getHolder() instanceof org.bukkit.block.Chest chestHolder)) return;
+        Block block = null;
+        if (inv.getHolder() instanceof org.bukkit.block.Chest chestHolder) {
+            block = chestHolder.getBlock();
+        } else if (inv.getHolder() instanceof org.bukkit.block.DoubleChest doubleChest) {
+            if (doubleChest.getLeftSide() instanceof org.bukkit.block.Chest leftChest) {
+                block = leftChest.getBlock();
+            }
+        }
+        if (block == null) return;
 
-        Block block = chestHolder.getBlock();
         String ownerUUID = getDeathChestOwner(block);
         if (ownerUUID == null) return;
 
