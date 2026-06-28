@@ -180,41 +180,41 @@ public class ChestPlacementHelper {
 
         BlockFace pf = player.getFacing();
         if (face == BlockFace.NORTH || face == BlockFace.SOUTH) {
-            facing = (pf == BlockFace.WEST) ? BlockFace.WEST : BlockFace.EAST;
+            facing = (pf == BlockFace.WEST) ? BlockFace.EAST : BlockFace.WEST;
             if (facing == BlockFace.WEST) {
                 if (face == BlockFace.NORTH) {
-                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
-                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
-                } else {
                     originType = org.bukkit.block.data.type.Chest.Type.LEFT;
                     secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
                 }
             } else { // EAST
                 if (face == BlockFace.NORTH) {
-                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
-                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
-                } else {
                     originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
                     secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
                 }
             }
         } else { // EAST or WEST
-            facing = (pf == BlockFace.SOUTH) ? BlockFace.SOUTH : BlockFace.NORTH;
+            facing = (pf == BlockFace.SOUTH) ? BlockFace.NORTH : BlockFace.SOUTH;
             if (facing == BlockFace.NORTH) {
                 if (face == BlockFace.EAST) {
-                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
-                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
-                } else {
                     originType = org.bukkit.block.data.type.Chest.Type.LEFT;
                     secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
                 }
             } else { // SOUTH
                 if (face == BlockFace.EAST) {
-                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
-                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
-                } else {
                     originType = org.bukkit.block.data.type.Chest.Type.RIGHT;
                     secondaryType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                } else {
+                    originType = org.bukkit.block.data.type.Chest.Type.LEFT;
+                    secondaryType = org.bukkit.block.data.type.Chest.Type.RIGHT;
                 }
             }
         }
