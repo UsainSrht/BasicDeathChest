@@ -84,7 +84,7 @@ public class ChestPlacementHelper {
             if (isChestLike(type)) {
                 for (BlockFace face : HORIZONTAL_FACES) {
                     Block candidate = origin.getRelative(face);
-                    if (candidate.getType().isAir()) {
+                    if (isDestroyable(candidate)) {
                         secondary = candidate;
                         foundFace = face;
                         break;
@@ -101,7 +101,7 @@ public class ChestPlacementHelper {
             if (secondary == null) {
                 // Check UP
                 Block above = origin.getRelative(BlockFace.UP);
-                if (above.getType().isAir()) {
+                if (isDestroyable(above)) {
                     secondary = above;
                 } else if (canBreak(above, player)) {
                     above.setType(Material.AIR);
@@ -155,9 +155,6 @@ public class ChestPlacementHelper {
      */
     public boolean canBreak(Block block, Player player) {
         if (block.getType().getHardness() < 0) {
-            return false;
-        }
-        if (!player.hasPermission("basicdeathchest.break")) {
             return false;
         }
         if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null) {
@@ -274,6 +271,11 @@ public class ChestPlacementHelper {
             overflow.addAll(result.values());
         }
         return overflow;
+    }
+
+    public static boolean isDestroyable(Block block) {
+        Material type = block.getType();
+        return type.isAir() || type.getHardness() >= 0;
     }
 
     private boolean isChestLike(Material type) {

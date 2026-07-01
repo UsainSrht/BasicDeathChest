@@ -86,7 +86,7 @@ public class DeathChestManager implements IDeathChestManager {
         Block origin = player.getLocation().getBlock();
 
         // Find a non-solid block to place the chest (search downward if needed)
-        origin = findSuitableBlock(origin);
+        origin = findSuitableBlock(origin, player);
 
         DeathChest chest = placementHelper.place(player, origin, chestItems);
         registerChest(chest);
@@ -263,22 +263,26 @@ public class DeathChestManager implements IDeathChestManager {
         }
     }
 
-    private Block findSuitableBlock(Block block) {
-        // If the death location is inside a solid block, move down until air is found
+    private Block findSuitableBlock(Block block, Player player) {
+        // If the death location is inside a solid block but the block above is destroyable/replaceable,
+        // place the chest on top of it. This handles cases like slabs, stalagmites, path blocks, etc.
+        if (block.getType().isSolid() && !ChestPlacementHelper.isDestroyable(block)) {
+            Block above = block.getRelative(org.bukkit.block.BlockFace.UP);
+            if (ChestPlacementHelper.isDestroyable(above)) {
+                return above;
+            }
+        }
+
+        // If the block itself is solid and not destroyable, check if we can break it or search downward
         int attempts = 0;
-        while (block.getType().isSolid() && !isDestroyable(block) && attempts < 5) {
+        while (block.getType().isSolid() && !ChestPlacementHelper.isDestroyable(block) && attempts < 5) {
+            if (placementHelper.canBreak(block, player)) {
+                return block;
+            }
             block = block.getRelative(org.bukkit.block.BlockFace.DOWN);
             attempts++;
         }
         return block;
-    }
-
-    private boolean isDestroyable(Block block) {
-        Material type = block.getType();
-        return type.isAir() || !type.isSolid() ||
-               type == Material.SHORT_GRASS || type == Material.TALL_GRASS ||
-               type == Material.FERN || type == Material.DEAD_BUSH ||
-               type == Material.SNOW;
     }
 
     private void playExpiryEffects(Location loc) {

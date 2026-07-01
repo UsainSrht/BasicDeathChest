@@ -90,7 +90,7 @@ public class ChestProtectionListener implements Listener {
 
     // ─── Interaction (open) ───────────────────────────────────────────────────
 
-    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = false)
     public void onPlayerInteract(PlayerInteractEvent event) {
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
         Block block = event.getClickedBlock();
@@ -119,8 +119,25 @@ public class ChestProtectionListener implements Listener {
         if (!isOwner && !canOpenOthers) {
             event.setCancelled(true);
             player.sendMessage(plugin.getMessagesManager().chestNotOwner());
+            return;
         }
-        // Otherwise, let vanilla handle the chest opening
+
+        // Bypass vanilla obstruction check (e.g. solid block above chest)
+        if (block.getState() instanceof Container container) {
+            event.setCancelled(true);
+
+            Inventory inventory = container.getInventory();
+            if (container instanceof org.bukkit.block.Chest chestBlock) {
+                if (inventory.getHolder() instanceof org.bukkit.block.DoubleChest doubleChest) {
+                    inventory = doubleChest.getInventory();
+                }
+            }
+
+            Inventory finalInventory = inventory;
+            me.usainsrht.basicdeathchest.util.FoliaUtil.runOnEntity(plugin, player, () -> {
+                player.openInventory(finalInventory);
+            }, null);
+        }
     }
 
     // ─── Auto-remove when empty ───────────────────────────────────────────────
