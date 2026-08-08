@@ -8,6 +8,7 @@ import me.usainsrht.basicdeathchest.database.DatabaseManager;
 import me.usainsrht.basicdeathchest.database.JsonDatabase;
 import me.usainsrht.basicdeathchest.database.SQLiteDatabase;
 import me.usainsrht.basicdeathchest.economy.VaultEconomyHook;
+import me.usainsrht.basicdeathchest.placeholder.MiniPlaceholdersHook;
 import me.usainsrht.basicdeathchest.gui.GUIListener;
 import me.usainsrht.basicdeathchest.hologram.HologramManager;
 import me.usainsrht.basicdeathchest.listener.ChestProtectionListener;
@@ -55,6 +56,7 @@ public class BasicDeathChest extends JavaPlugin {
     private TeleportManager teleportManager;
     private BodyguardManager bodyguardManager;
     private VaultEconomyHook vaultEconomy;
+    private MiniPlaceholdersHook miniPlaceholders;
 
     /** PDC key used to tag death chest block states with the owner's UUID string. */
     private NamespacedKey deathChestKey;
@@ -86,6 +88,10 @@ public class BasicDeathChest extends JavaPlugin {
         // Economy hook (Vault must be loaded by now as a soft-depend)
         vaultEconomy = new VaultEconomyHook(getLogger());
         vaultEconomy.initialize();
+
+        // MiniPlaceholders soft-depend (optional death-message display names)
+        miniPlaceholders = new MiniPlaceholdersHook(getLogger());
+        miniPlaceholders.initialize();
 
         // Core managers
         deathChestManager = new DeathChestManager(this);
@@ -123,6 +129,9 @@ public class BasicDeathChest extends JavaPlugin {
         getLogger().info("Database backend: " + configManager.getDatabaseBackend());
         if (vaultEconomy.isEnabled()) {
             getLogger().info("Vault economy: active");
+        }
+        if (miniPlaceholders.isAvailable()) {
+            getLogger().info("MiniPlaceholders: active");
         }
 
         // Initialize bStats metrics (shaded & relocated)
@@ -184,6 +193,7 @@ public class BasicDeathChest extends JavaPlugin {
     public TeleportManager  getTeleportManager()   { return teleportManager; }
     public BodyguardManager getBodyguardManager()  { return bodyguardManager; }
     public VaultEconomyHook getVaultEconomy()      { return vaultEconomy; }
+    public MiniPlaceholdersHook getMiniPlaceholders() { return miniPlaceholders; }
 
     /**
      * Returns the {@link NamespacedKey} used to tag death chest block states in PDC.

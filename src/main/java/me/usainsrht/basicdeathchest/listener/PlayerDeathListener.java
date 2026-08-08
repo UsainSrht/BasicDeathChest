@@ -1,12 +1,19 @@
 package me.usainsrht.basicdeathchest.listener;
 
 import me.usainsrht.basicdeathchest.BasicDeathChest;
+import me.usainsrht.basicdeathchest.config.ConfigManager;
 import me.usainsrht.basicdeathchest.database.model.ChestStatus;
 import me.usainsrht.basicdeathchest.database.model.DeathEntry;
 import me.usainsrht.basicdeathchest.util.FoliaUtil;
 import me.usainsrht.basicdeathchest.util.ItemStackSerializer;
 import me.usainsrht.basicdeathchest.util.LocationUtil;
+import me.usainsrht.basicdeathchest.util.MiniMessageUtil;
+import me.usainsrht.itemapi.itemtext.ItemText;
+import me.usainsrht.itemapi.itemtext.ItemTextOptions;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TranslatableComponent;
+import net.kyori.adventure.text.TranslationArgument;
+import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.GameRule;
 import org.bukkit.Location;
@@ -23,12 +30,15 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -178,8 +188,187 @@ public class PlayerDeathListener implements Listener {
                         "world", LocationUtil.worldName(loc));
                 event.deathMessage(msg);
             }
-            default -> { /* VANILLA — do nothing, let Paper handle it */ }
+            default -> handleVanillaDeathMessage(event, player);
         }
+    }
+
+    /**
+     * Optionally rewrites player-name / item args and/or wraps Paper's vanilla death message.
+     * Keeps the {@link TranslatableComponent} key so clients still translate/locale.
+     */
+    private void handleVanillaDeathMessage(PlayerDeathEvent event, Player player) {
+        ConfigManager cfg = plugin.getConfigManager();
+        boolean styleEnabled = cfg.isVanillaDeathStyleEnabled();
+        boolean placeholdersEnabled = cfg.isVanillaDeathPlaceholdersEnabled();
+        boolean itemTextEnabled = cfg.isVanillaDeathItemTextEnabled();
+        if (!styleEnabled && !placeholdersEnabled && !itemTextEnabled) {
+            return;
+        }
+
+        Component message = event.deathMessage();
+        if (message == null) {
+            return;
+        }
+
+        Component result = message;
+        if (placeholdersEnabled) {
+            result = rewriteVanillaPlayerArgs(result, player, event.getEntity().getKiller());
+        }
+        if (itemTextEnabled) {
+            result = rewriteVanillaItemArgs(result, event);
+        }
+
+        if (styleEnabled) {
+            String format = cfg.getVanillaDeathStyleFormat();
+            if (format != null && !format.isBlank()) {
+                result = MiniMessageUtil.parseWithComponents(format, "death_message", result);
+            }
+        }
+
+        event.deathMessage(result);
+    }
+
+    /**
+     * Replaces translation args whose plain text matches an involved player's name
+     * with MiniPlaceholders-resolved display names (same format, different audience).
+     */
+    private Component rewriteVanillaPlayerArgs(Component message, Player victim, Player killer) {
+        if (!(message instanceof TranslatableComponent translatable)) {
+            return message;
+        }
+
+        Map<String, Player> playersByName = new HashMap<>(4);
+        indexPlayerNames(playersByName, victim);
+        if (killer != null) {
+            indexPlayerNames(playersByName, killer);
+        }
+
+        String playerFormat = plugin.getConfigManager().getVanillaDeathPlayerFormat();
+        List<TranslationArgument> oldArgs = translatable.arguments();
+        if (oldArgs.isEmpty()) {
+            return message;
+        }
+
+        List<Component> newArgs = new ArrayList<>(oldArgs.size());
+        boolean changed = false;
+        for (TranslationArgument arg : oldArgs) {
+            Component argComponent = arg.asComponent();
+            String plain = MiniMessageUtil.plain(argComponent);
+            Player matched = playersByName.get(plain);
+            if (matched != null) {
+                newArgs.add(plugin.getMiniPlaceholders().resolve(playerFormat, matched));
+                changed = true;
+            } else {
+                newArgs.add(argComponent);
+            }
+        }
+
+        if (!changed) {
+            return message;
+        }
+        return translatable.arguments(newArgs);
+    }
+
+    private static void indexPlayerNames(Map<String, Player> map, Player player) {
+        map.put(player.getName(), player);
+        String displayPlain = MiniMessageUtil.plain(player.displayName());
+        if (!displayPlain.isBlank()) {
+            map.put(displayPlain, player);
+        }
+    }
+
+    /**
+     * Replaces item/weapon translation args with {@link ItemText}-formatted Components.
+     */
+    private Component rewriteVanillaItemArgs(Component message, PlayerDeathEvent event) {
+        if (!(message instanceof TranslatableComponent translatable)) {
+            return message;
+        }
+
+        ItemStack weapon = resolveDeathWeapon(event);
+        if (weapon == null || weapon.getType().isAir() || weapon.getAmount() <= 0) {
+            return message;
+        }
+
+        List<TranslationArgument> oldArgs = translatable.arguments();
+        if (oldArgs.isEmpty()) {
+            return message;
+        }
+
+        ItemTextOptions options = ItemTextOptions.defaults().toBuilder()
+                .displayCustomName(plugin.getConfigManager().isVanillaDeathItemTextShowCustomName())
+                .build();
+        Component itemComponent = ItemText.format(weapon, options);
+
+        List<Component> newArgs = new ArrayList<>(oldArgs.size());
+        boolean changed = false;
+        for (TranslationArgument arg : oldArgs) {
+            Component argComponent = arg.asComponent();
+            if (isItemArg(argComponent)) {
+                newArgs.add(itemComponent);
+                changed = true;
+            } else {
+                newArgs.add(argComponent);
+            }
+        }
+
+        if (!changed) {
+            return message;
+        }
+        return translatable.arguments(newArgs);
+    }
+
+    /**
+     * True for death-message args that represent an item (hover show_item or item/block translation).
+     */
+    private static boolean isItemArg(Component component) {
+        if (component == null) {
+            return false;
+        }
+        HoverEvent<?> hover = component.hoverEvent();
+        if (hover != null && HoverEvent.Action.SHOW_ITEM.equals(hover.action())) {
+            return true;
+        }
+        if (component instanceof TranslatableComponent tc) {
+            String key = tc.key();
+            return key.startsWith("item.") || key.startsWith("block.");
+        }
+        return false;
+    }
+
+    /**
+     * Best-effort weapon used in the killing blow (killer main hand, else damager equipment).
+     */
+    private static ItemStack resolveDeathWeapon(PlayerDeathEvent event) {
+        Player killer = event.getEntity().getKiller();
+        if (killer != null) {
+            ItemStack hand = killer.getInventory().getItemInMainHand();
+            if (hand != null && !hand.getType().isAir()) {
+                return hand;
+            }
+        }
+
+        EntityDamageEvent last = event.getEntity().getLastDamageCause();
+        if (!(last instanceof EntityDamageByEntityEvent byEntity)) {
+            return null;
+        }
+
+        Entity damager = byEntity.getDamager();
+        if (damager instanceof Projectile projectile
+                && projectile.getShooter() instanceof Entity shooterEntity) {
+            damager = shooterEntity;
+        }
+
+        if (damager instanceof LivingEntity living) {
+            EntityEquipment equipment = living.getEquipment();
+            if (equipment != null) {
+                ItemStack hand = equipment.getItemInMainHand();
+                if (hand != null && !hand.getType().isAir()) {
+                    return hand;
+                }
+            }
+        }
+        return null;
     }
 
     /**

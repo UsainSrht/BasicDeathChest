@@ -186,6 +186,25 @@ death-messages:
   # Placeholders: %player%, %cause%, %x%, %y%, %z%, %world%
   custom-format: "<red>☠ <white>%player% <gray>died at <white>%x%<gray>, <white>%y%<gray>, <white>%z%<gray>. (Cause: %cause%)"
 
+  # Only used when mode is VANILLA. Styles / rewrites Paper's vanilla TranslatableComponent.
+  vanilla:
+    style:
+      enabled: true
+      # MiniMessage wrapper; <death_message> inserts the (possibly rewritten) vanilla Component
+      format: "<gray><death_message>"
+    placeholders:
+      enabled: true
+      # Resolved once per involved player (victim, killer, …) via MiniPlaceholders audience placeholders.
+      # Soft-depends MiniPlaceholders; falls back to Paper displayName() when absent.
+      # Example: "<player_displayname>" or a custom expansion like "<scchatuser_displayname>"
+      player-format: "<player_displayname>"
+    # Rewrites the weapon/item argument in vanilla death messages (e.g. death.attack.player.item)
+    # using ItemText (shaded). Shows item sprite + name in chat.
+    itemtext:
+      enabled: true
+      # When true, uses the item's custom display name if present; otherwise the vanilla item name.
+      show-custom-name: true
+
 # ─── Teleportation ───────────────────────────────────────────
 teleport:
   enabled: true

@@ -1,14 +1,17 @@
 plugins {
     id 'java'
-    id 'com.gradleup.shadow' version '8.3.6'
+    id 'com.gradleup.shadow' version '9.6.1'
 }
 
 group = 'me.usainsrht'
 version = '1.0.1'
-description = 'A production-ready, Folia-compatible death chest plugin for Paper 1.21'
+description = 'A production-ready, Folia-compatible death chest plugin for Paper 1.21 (Java 25+)'
 
-sourceCompatibility = JavaVersion.VERSION_21
-targetCompatibility = JavaVersion.VERSION_21
+// Java 25 required by shaded ItemText (class file version 69)
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
 
 repositories {
     mavenCentral()
@@ -16,6 +19,19 @@ repositories {
     maven { url = 'https://jitpack.io' }
     maven { url = 'https://repo.fancyinnovations.com/releases' }
     maven { url = 'https://maven.enginehub.org/repo/' }
+    // ItemText (ItemAPI) — CodeMC Jenkins artifact layout
+    exclusiveContent {
+        forRepository {
+            ivy {
+                url = 'https://ci.codemc.io/job/UsainSrht/job/ItemAPI/lastSuccessfulBuild'
+                patternLayout {
+                    artifact 'me.usainsrht.itemapi$[module]/artifact/me.usainsrht.itemapi/[module]/[revision]/[artifact]-[revision].[ext]'
+                }
+                metadataSources { artifact() }
+            }
+        }
+        filter { includeGroup 'me.usainsrht.itemapi' }
+    }
 }
 
 dependencies {
@@ -24,6 +40,12 @@ dependencies {
 
     // Vault API — soft-depend, provided by Vault plugin at runtime
     compileOnly 'com.github.MilkBowl:VaultAPI:1.7.1'
+
+    // MiniPlaceholders API — soft-depend (v3+; audience passed to MiniMessage#deserialize)
+    compileOnly 'io.github.miniplaceholders:miniplaceholders-api:3.2.0'
+
+    // ItemText — shadeable Adventure ItemStack formatter (https://ci.codemc.io/job/UsainSrht/job/ItemAPI/)
+    implementation 'me.usainsrht.itemapi:itemtext:1.0.3'
 
     // SQLite JDBC — compileOnly, loaded dynamically at runtime via PluginLoader
     compileOnly 'org.xerial:sqlite-jdbc:3.45.3.0'

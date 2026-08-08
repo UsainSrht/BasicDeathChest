@@ -92,6 +92,12 @@ public class ConfigManager {
     // ── Death messages ───────────────────────────────────────────────────────
     private String deathMessageMode;
     private String deathMessageCustomFormat;
+    private boolean vanillaDeathStyleEnabled;
+    private String vanillaDeathStyleFormat;
+    private boolean vanillaDeathPlaceholdersEnabled;
+    private String vanillaDeathPlayerFormat;
+    private boolean vanillaDeathItemTextEnabled;
+    private boolean vanillaDeathItemTextShowCustomName;
 
     // ── Teleport ─────────────────────────────────────────────────────────────
     private boolean teleportEnabled;
@@ -228,6 +234,14 @@ public class ConfigManager {
         // Death messages
         deathMessageMode = cfg.getString("death-messages.mode", "VANILLA").toUpperCase();
         deathMessageCustomFormat = cfg.getString("death-messages.custom-format", "");
+        vanillaDeathStyleEnabled = cfg.getBoolean("death-messages.vanilla.style.enabled", false);
+        vanillaDeathStyleFormat = cfg.getString("death-messages.vanilla.style.format", "<gray><death_message>");
+        vanillaDeathPlaceholdersEnabled = cfg.getBoolean("death-messages.vanilla.placeholders.enabled", false);
+        vanillaDeathPlayerFormat = cfg.getString("death-messages.vanilla.placeholders.player-format",
+                "<player_displayname>");
+        vanillaDeathItemTextEnabled = cfg.getBoolean("death-messages.vanilla.itemtext.enabled", false);
+        vanillaDeathItemTextShowCustomName = cfg.getBoolean(
+                "death-messages.vanilla.itemtext.show-custom-name", true);
 
         // Teleport
         teleportEnabled = cfg.getBoolean("teleport.enabled", true);
@@ -427,6 +441,12 @@ public class ConfigManager {
     public String getCoordinatesMessage()           { return coordinatesMessage; }
     public String getDeathMessageMode()             { return deathMessageMode; }
     public String getDeathMessageCustomFormat()     { return deathMessageCustomFormat; }
+    public boolean isVanillaDeathStyleEnabled()     { return vanillaDeathStyleEnabled; }
+    public String getVanillaDeathStyleFormat()      { return vanillaDeathStyleFormat; }
+    public boolean isVanillaDeathPlaceholdersEnabled() { return vanillaDeathPlaceholdersEnabled; }
+    public String getVanillaDeathPlayerFormat()     { return vanillaDeathPlayerFormat; }
+    public boolean isVanillaDeathItemTextEnabled()  { return vanillaDeathItemTextEnabled; }
+    public boolean isVanillaDeathItemTextShowCustomName() { return vanillaDeathItemTextShowCustomName; }
     public boolean isTeleportEnabled()              { return teleportEnabled; }
     public int getTeleportFreeUses()                { return teleportFreeUses; }
     public double getTeleportCost()                 { return teleportCost; }

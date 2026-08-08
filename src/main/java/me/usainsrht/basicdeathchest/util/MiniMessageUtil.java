@@ -66,11 +66,54 @@ public final class MiniMessageUtil {
     }
 
     /**
+     * Deserializes a MiniMessage string with Adventure {@link Component} placeholders.
+     *
+     * <pre>{@code
+     * MiniMessageUtil.parseWithComponents("<gray><death_message>",
+     *         "death_message", vanillaComponent);
+     * }</pre>
+     *
+     * @param text  MiniMessage source using {@code <key>} tags for components
+     * @param pairs alternating key / {@link Component} values; must be even-length
+     */
+    public static Component parseWithComponents(String text, Object... pairs) {
+        if (text == null) return Component.empty();
+        if (pairs == null || pairs.length == 0) return parse(text);
+        if (pairs.length % 2 != 0) {
+            throw new IllegalArgumentException(
+                    "MiniMessageUtil.parseWithComponents(): pairs must be key-value pairs (even count)");
+        }
+        TagResolver.Builder builder = TagResolver.builder();
+        for (int i = 0; i < pairs.length; i += 2) {
+            Object keyObj = pairs[i];
+            Object valueObj = pairs[i + 1];
+            if (!(keyObj instanceof String key)) {
+                throw new IllegalArgumentException(
+                        "MiniMessageUtil.parseWithComponents(): keys must be String");
+            }
+            if (!(valueObj instanceof Component component)) {
+                throw new IllegalArgumentException(
+                        "MiniMessageUtil.parseWithComponents(): values must be Component");
+            }
+            builder.resolver(Placeholder.component(key, component));
+        }
+        return MM.deserialize(text, builder.build());
+    }
+
+    /**
      * Strips all MiniMessage tags and returns the plain text equivalent.
      */
     public static String stripFormatting(String text) {
         if (text == null) return "";
         return PLAIN.serialize(MM.deserialize(text));
+    }
+
+    /**
+     * Returns the plain-text representation of a {@link Component}.
+     */
+    public static String plain(Component component) {
+        if (component == null) return "";
+        return PLAIN.serialize(component);
     }
 
     /**
