@@ -195,7 +195,8 @@ public class DeathLocationsGUI implements InventoryHolder {
                 "world", entry.getWorld())));
         lore.add(formatItemText(MiniMessageUtil.parse(
                 plugin.getMessagesManager().getRaw("gui-entry-lore-cause"),
-                "cause", plugin.getMessagesManager().getTranslatedCause(entry.getDeathCause()))));
+                "cause", plugin.getMessagesManager().formatDeathCause(
+                        entry.getDeathCause(), entry.getKiller()))));
         lore.add(formatItemText(MiniMessageUtil.parse(
                 plugin.getMessagesManager().getRaw("gui-entry-lore-coords"),
                 "x", String.valueOf(entry.getX()),
@@ -204,8 +205,15 @@ public class DeathLocationsGUI implements InventoryHolder {
         lore.add(formatItemText(MiniMessageUtil.parse(
                 plugin.getMessagesManager().getRaw("gui-entry-lore-time"),
                 "time", entry.getFormattedTime())));
+        lore.add(formatItemText(MiniMessageUtil.parse(
+                plugin.getMessagesManager().getRaw("gui-entry-lore-chest"),
+                "status", plugin.getMessagesManager().formatChestStatus(entry.getChestStatus()))));
         lore.add(Component.empty());
         lore.add(formatItemText(MiniMessageUtil.parse(plugin.getMessagesManager().getRaw("gui-entry-lore-click"))));
+        if (isAdminView) {
+            lore.add(formatItemText(MiniMessageUtil.parse(
+                    plugin.getMessagesManager().getRaw("gui-entry-lore-admin-items"))));
+        }
 
         meta.lore(lore);
         // Suppress attribute modifiers tooltip
@@ -234,6 +242,7 @@ public class DeathLocationsGUI implements InventoryHolder {
         int freeUses = plugin.getTeleportManager().getRemainingFreeUses(targetUUID);
         double cost = plugin.getConfigManager().getTeleportCost();
         String formattedCost = plugin.getVaultEconomy().isEnabled() ? plugin.getVaultEconomy().format(cost) : String.valueOf(cost);
+        String maxAgeHours = String.valueOf(plugin.getConfigManager().getGuiMaxRecordAgeHours());
 
         Material material = plugin.getConfigManager().getGuiInfoMaterial();
         ItemStack item = new ItemStack(material);
@@ -241,11 +250,17 @@ public class DeathLocationsGUI implements InventoryHolder {
         if (meta == null) return item;
 
         String name = plugin.getConfigManager().getGuiInfoName();
-        meta.displayName(formatItemText(MiniMessageUtil.parse(name, "cost", formattedCost, "free_uses", String.valueOf(freeUses))));
+        meta.displayName(formatItemText(MiniMessageUtil.parse(name,
+                "cost", formattedCost,
+                "free_uses", String.valueOf(freeUses),
+                "max_age_hours", maxAgeHours)));
 
         List<Component> lore = new ArrayList<>();
         for (String line : plugin.getConfigManager().getGuiInfoLore()) {
-            lore.add(formatItemText(MiniMessageUtil.parse(line, "cost", formattedCost, "free_uses", String.valueOf(freeUses))));
+            lore.add(formatItemText(MiniMessageUtil.parse(line,
+                    "cost", formattedCost,
+                    "free_uses", String.valueOf(freeUses),
+                    "max_age_hours", maxAgeHours)));
         }
         meta.lore(lore);
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);

@@ -1,6 +1,7 @@
 package me.usainsrht.basicdeathchest.config;
 
 import me.usainsrht.basicdeathchest.BasicDeathChest;
+import me.usainsrht.basicdeathchest.database.model.ChestStatus;
 import me.usainsrht.basicdeathchest.util.MiniMessageUtil;
 import net.kyori.adventure.text.Component;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -161,6 +162,24 @@ public class MessagesManager {
         return getRawComponent("help-info", "cmd", cmd);
     }
 
+    /**
+     * Formats a death cause for display using {@code death-cause-format} /
+     * {@code death-cause-format-killer} from messages.yml.
+     *
+     * <p>Placeholders: {@code %cause%} (translated damage type),
+     * {@code %killer%} (player or mob name).
+     */
+    public String formatDeathCause(String deathCause, String killer) {
+        String translatedCause = getTranslatedCause(deathCause);
+        String killerName = killer == null ? "" : killer;
+        String format = killerName.isBlank()
+                ? cfg.getString("death-cause-format", "%cause%")
+                : cfg.getString("death-cause-format-killer", "%killer%");
+        return format
+                .replace("%cause%", translatedCause)
+                .replace("%killer%", killerName);
+    }
+
     public String getTranslatedCause(String deathCause) {
         if (deathCause == null || deathCause.isEmpty()) {
             return cfg.getString("death-reasons.UNKNOWN", "Unknown");
@@ -169,9 +188,34 @@ public class MessagesManager {
         if (cfg.contains(key)) {
             return cfg.getString(key);
         }
-        // Fallback to default formatting if not translated
+        // Fallback to default formatting for unlisted DamageCause enums
         String lowered = deathCause.replace('_', ' ').toLowerCase();
         return Character.toUpperCase(lowered.charAt(0)) + lowered.substring(1);
+    }
+
+    /**
+     * Builds the chest-status lore fragment from individually translated parts.
+     *
+     * <p>Examples: {@code chest placed} or {@code chest not placed, no items}.
+     */
+    public String formatChestStatus(ChestStatus status) {
+        if (status == null) {
+            status = ChestStatus.UNKNOWN;
+        }
+        if (status == ChestStatus.PLACED) {
+            return getRaw("chest-status-placed");
+        }
+
+        String notPlaced = getRaw("chest-status-not-placed");
+        String separator = cfg.getString("chest-status-separator", "<gray>, ");
+        String reasonKey = switch (status) {
+            case NO_ITEMS -> "chest-status-reason-no-items";
+            case BLOCK_OBSTRUCTION -> "chest-status-reason-block-obstruction";
+            case NO_PERMISSION -> "chest-status-reason-no-permission";
+            case WORLD_FILTERED -> "chest-status-reason-world-filtered";
+            default -> "chest-status-reason-unknown";
+        };
+        return notPlaced + separator + getRaw(reasonKey);
     }
 
     public Component teleportDisabled()               { return get("teleport-disabled"); }
@@ -190,6 +234,10 @@ public class MessagesManager {
 
     public Component reloadSuccess()                  { return get("reload-success"); }
     public Component reloadFail()                     { return get("reload-fail"); }
+
+    public Component adminItemsRestored()             { return get("admin-items-restored"); }
+    public Component adminItemsNone()                 { return get("admin-items-none"); }
+    public Component adminItemsFailed()               { return get("admin-items-failed"); }
 
     public Component coordinatesMessage(String x, String y, String z, String world) {
         String msg = plugin.getConfigManager().getCoordinatesMessage();

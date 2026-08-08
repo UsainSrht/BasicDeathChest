@@ -84,6 +84,7 @@ database:
   # Backend: SQLITE, JSON
   backend: SQLITE
   # How many death entries to keep per player. Set to 0 or negative for permanent logging.
+  # Also limits retained admin death-item snapshots (pruned with old entries).
   max-entries-per-player: 50
   # If true, deaths in worlds not allowed by the world filter will still be logged.
   bypass-world-filter: false
@@ -101,9 +102,11 @@ gui:
   filler-material: GRAY_STAINED_GLASS_PANE
 
   # Show only death records from the last X hours (e.g. 72). Set to 0 or negative to show all.
+  # Admin death-item snapshots older than this are also deleted to save space.
   max-record-age-hours: 72
 
   # Information item explaining the death system, costs, and remaining free uses.
+  # Placeholders: %cost%, %free_uses%, %max_age_hours%
   info-item:
     enabled: true
     slot: 4
@@ -115,6 +118,7 @@ gui:
       - ""
       - "<gray>Teleportation Cost: <gold>%cost% coins</gold>"
       - "<gray>Remaining Free Uses: <green>%free_uses%</green>"
+      - "<gray>Death entries older than <white>%max_age_hours% hours</white> will be deleted."
 
   # Total rows in the GUI inventory (1 to 6).
   rows: 6

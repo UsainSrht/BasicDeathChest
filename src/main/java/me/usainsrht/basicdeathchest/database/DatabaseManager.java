@@ -1,6 +1,7 @@
 package me.usainsrht.basicdeathchest.database;
 
 import me.usainsrht.basicdeathchest.database.model.DeathEntry;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.List;
 import java.util.UUID;
@@ -45,6 +46,28 @@ public interface DatabaseManager {
      * Removes a specific death entry identified by player UUID and timestamp.
      */
     void removeEntry(UUID playerUUID, long timestamp);
+
+    /**
+     * Persists a slot-accurate inventory snapshot for a death.
+     * Failures are logged and must not affect death-entry metadata.
+     */
+    void saveDeathItems(UUID playerUUID, long timestamp, ItemStack[] contents);
+
+    /**
+     * Loads a death inventory snapshot. On missing/corrupt data the callback
+     * receives an empty inventory array (never {@code null}).
+     */
+    void getDeathItems(UUID playerUUID, long timestamp, Consumer<ItemStack[]> callback);
+
+    /**
+     * Deletes the inventory snapshot for a specific death.
+     */
+    void deleteDeathItems(UUID playerUUID, long timestamp);
+
+    /**
+     * Deletes inventory snapshots older than {@code cutoffMillis}.
+     */
+    void purgeOldDeathItems(long cutoffMillis);
 
     /**
      * Asynchronously fetches the number of free uses consumed by a player.

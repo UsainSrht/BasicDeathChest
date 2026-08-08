@@ -51,7 +51,8 @@ public class TeleportManager {
      *
      * @param player the player to teleport
      * @param entry  the target death entry
-     * @param free   whether to bypass checks and teleport for free (admin bypass)
+     * @param free   whether to bypass checks and teleport silently (admin bypass:
+     *               no cost, bodyguards, sounds, effects, or success message)
      */
     public void teleport(Player player, DeathEntry entry, boolean free) {
         if (!free && !plugin.getConfigManager().isTeleportEnabled()) {
@@ -63,7 +64,7 @@ public class TeleportManager {
         World world = Bukkit.getWorld(entry.getWorld());
         if (world == null) {
             player.sendMessage(plugin.getMessagesManager().teleportWorldNotLoaded());
-            playFailureSound(player);
+            if (!free) playFailureSound(player);
             return;
         }
 
@@ -77,9 +78,12 @@ public class TeleportManager {
         FoliaUtil.runOnEntity(plugin, player, () -> {
             player.teleportAsync(destination).thenAccept(success -> {
                 if (!success) {
-                    playFailureSound(player);
+                    if (!free) playFailureSound(player);
                     return;
                 }
+                // Admin / free teleports are silent — no effects, guards, sounds, or messages
+                if (free) return;
+
                 // Post-teleport effects — schedule on the player's new region thread
                 FoliaUtil.runOnEntity(plugin, player, () -> {
                     applyArrivalEffects(player);

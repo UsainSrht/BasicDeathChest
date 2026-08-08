@@ -5,9 +5,11 @@ import me.usainsrht.basicdeathchest.api.events.DeathChestCreateEvent;
 import me.usainsrht.basicdeathchest.api.events.DeathChestExpireEvent;
 import me.usainsrht.basicdeathchest.api.interfaces.IDeathChest;
 import me.usainsrht.basicdeathchest.api.interfaces.IDeathChestManager;
+import me.usainsrht.basicdeathchest.database.model.ChestStatus;
 import me.usainsrht.basicdeathchest.hologram.DeathChestHologram;
 import me.usainsrht.basicdeathchest.util.FoliaUtil;
 import me.usainsrht.basicdeathchest.util.LocationUtil;
+import me.usainsrht.basicdeathchest.util.WorldGuardWrapper;
 import net.kyori.adventure.sound.Sound;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -18,8 +20,6 @@ import org.bukkit.block.Container;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.persistence.PersistentDataHolder;
-import org.bukkit.persistence.PersistentDataType;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,30 +63,28 @@ public class DeathChestManager implements IDeathChestManager {
      *
      * @param player the player who died
      * @param drops  the items to store (list is NOT cleared — caller is responsible)
+     * @return placement outcome for death history logging
      */
-    public void createDeathChest(Player player, List<ItemStack> drops) {
-        if (drops.isEmpty()) return;
+    public ChestStatus createDeathChest(Player player, List<ItemStack> drops) {
+        if (drops.isEmpty()) return ChestStatus.NO_ITEMS;
 
         // Fire pre-create event (cancellable)
         DeathChestCreateEvent event = new DeathChestCreateEvent(player, new ArrayList<>(drops));
         Bukkit.getPluginManager().callEvent(event);
 
         if (event.isCancelled()) {
-            // Drop items naturally at death location
-            Location loc = player.getLocation();
-            for (ItemStack item : drops) {
-                if (item != null && !item.getType().isAir()) {
-                    loc.getWorld().dropItemNaturally(loc, item);
-                }
-            }
-            return;
+            dropNaturally(player.getLocation(), drops);
+            return ChestStatus.BLOCK_OBSTRUCTION;
         }
 
         List<ItemStack> chestItems = event.getDrops();
-        Block origin = player.getLocation().getBlock();
+        Block origin = findSuitableBlock(player.getLocation().getBlock(), player);
 
-        // Find a non-solid block to place the chest (search downward if needed)
-        origin = findSuitableBlock(origin, player);
+        ChestStatus placementBlock = validatePlacement(origin, player);
+        if (placementBlock != null) {
+            dropNaturally(player.getLocation(), chestItems);
+            return placementBlock;
+        }
 
         DeathChest chest = placementHelper.place(player, origin, chestItems);
         registerChest(chest);
@@ -114,6 +112,7 @@ public class DeathChestManager implements IDeathChestManager {
                 LocationUtil.x(deathLoc),
                 LocationUtil.y(deathLoc),
                 LocationUtil.z(deathLoc)));
+        return ChestStatus.PLACED;
     }
 
     // ─── IDeathChestManager ───────────────────────────────────────────────────
@@ -283,6 +282,28 @@ public class DeathChestManager implements IDeathChestManager {
             attempts++;
         }
         return block;
+    }
+
+    /**
+     * @return failure status, or {@code null} if placement may proceed
+     */
+    private ChestStatus validatePlacement(Block block, Player player) {
+        if (Bukkit.getPluginManager().getPlugin("WorldGuard") != null
+                && !WorldGuardWrapper.canBuild(player, block.getLocation())) {
+            return ChestStatus.NO_PERMISSION;
+        }
+        if (ChestPlacementHelper.isDestroyable(block) || placementHelper.canBreak(block, player)) {
+            return null;
+        }
+        return ChestStatus.BLOCK_OBSTRUCTION;
+    }
+
+    private void dropNaturally(Location loc, List<ItemStack> items) {
+        for (ItemStack item : items) {
+            if (item != null && !item.getType().isAir()) {
+                loc.getWorld().dropItemNaturally(loc, item);
+            }
+        }
     }
 
     private void playExpiryEffects(Location loc) {

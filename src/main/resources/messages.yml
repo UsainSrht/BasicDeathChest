@@ -32,7 +32,22 @@ gui-entry-lore-world: "<gray>World: <white>%world%"
 gui-entry-lore-cause: "<gray>Cause: <red>%cause%"
 gui-entry-lore-coords: "<gray>Location: <white>%x%<gray>, <white>%y%<gray>, <white>%z%"
 gui-entry-lore-time: "<gray>Time: <white>%time%"
+gui-entry-lore-chest: "<gray>Chest: %status%"
 gui-entry-lore-click: "<yellow>Click to teleport!"
+gui-entry-lore-admin-items: "<aqua>Shift-click to load death items into your inventory"
+
+# ─── Chest Status (GUI lore parts) ───────────────────────────
+# Composed into %status% for gui-entry-lore-chest.
+# Placed:   just chest-status-placed
+# Otherwise: chest-status-not-placed + chest-status-separator + chest-status-reason-*
+chest-status-placed: "<green>chest placed"
+chest-status-not-placed: "<red>chest not placed"
+chest-status-separator: "<gray>, "
+chest-status-reason-no-items: "<white>no items"
+chest-status-reason-block-obstruction: "<white>block obstruction"
+chest-status-reason-no-permission: "<white>no permission"
+chest-status-reason-world-filtered: "<white>world filtered"
+chest-status-reason-unknown: "<white>unknown"
 
 # ─── Pagination Buttons ──────────────────────────────────────
 gui-previous-page: "<yellow>« Previous Page"
@@ -71,6 +86,9 @@ timer-format-minutes: "<yellow>%m%m %s%s"
 # ─── Admin ───────────────────────────────────────────────────
 admin-chest-removed: "<green>Death chest at %location% removed."
 admin-reload-start: "<gray>Reloading BasicDeathChest..."
+admin-items-restored: "<green>Death items loaded into your inventory."
+admin-items-none: "<yellow>No death items were saved for this entry."
+admin-items-failed: "<red>Failed to load death items for this entry."
 
 # ─── Help Messages ───────────────────────────────────────────
 help-header: "<gold><bold>BasicDeathChest</bold></gold> <gray>v%version%"
@@ -79,7 +97,22 @@ help-admin-gui: "<yellow>/%cmd% gui [player]</yellow> <gray>— Open another pla
 help-reload: "<yellow>/%cmd% reload</yellow> <gray>— Reload configuration (admin)."
 help-info: "<yellow>/%cmd% info</yellow> <gray>— Show this help message."
 
+# ─── Death Cause Display ─────────────────────────────────────
+# Placeholders: %cause% (translated damage type), %killer% (player/mob name)
+#
+# Examples:
+#   "%killer%"              → Zombie / Steve
+#   "%cause%"               → Entity Attack / Fall Damage
+#   "%cause%: %killer%"     → Entity Attack: Zombie
+#   "%killer% (%cause%)"    → Zombie (Entity Attack)
+#
+# Used when a killer entity is known (mob, player, projectile shooter, etc.)
+death-cause-format-killer: "%killer%"
+# Used for environmental deaths with no killer (fall, lava, drowning, …)
+death-cause-format: "%cause%"
+
 # ─── Death Reasons ───────────────────────────────────────────
+# Translated labels for %cause% (DamageCause enum names)
 death-reasons:
   CONTACT: "Contact"
   ENTITY_ATTACK: "Entity Attack"

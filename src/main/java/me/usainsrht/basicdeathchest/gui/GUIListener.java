@@ -3,16 +3,21 @@ package me.usainsrht.basicdeathchest.gui;
 import me.usainsrht.basicdeathchest.BasicDeathChest;
 import me.usainsrht.basicdeathchest.database.model.DeathEntry;
 import me.usainsrht.basicdeathchest.util.FoliaUtil;
+import me.usainsrht.basicdeathchest.util.ItemStackSerializer;
 import me.usainsrht.basicdeathchest.util.MiniMessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 
 import java.util.UUID;
+import java.util.logging.Level;
 
 /**
  * Handles all inventory interactions for the {@link DeathLocationsGUI}.
@@ -63,7 +68,12 @@ public class GUIListener implements Listener {
         if (entry == null) return; // Clicked filler or page indicator/empty button
 
         if (gui.isAdminView()) {
-            // Admin GUI bypasses all costs/checks
+            // Shift-click: restore death items into admin inventory; keep GUI open
+            if (event.getClick() == ClickType.SHIFT_LEFT || event.getClick() == ClickType.SHIFT_RIGHT) {
+                restoreDeathItems(player, entry);
+                return;
+            }
+            // Normal click: free teleport
             player.closeInventory();
             plugin.getTeleportManager().teleport(player, entry, true);
             return;
@@ -90,6 +100,43 @@ public class GUIListener implements Listener {
     public void onInventoryDrag(InventoryDragEvent event) {
         if (event.getInventory().getHolder() instanceof DeathLocationsGUI) {
             event.setCancelled(true);
+        }
+    }
+
+    /**
+     * Loads a death inventory snapshot and applies it to the admin's inventory.
+     * Clears first, then restores by original slot. Does not close the GUI.
+     */
+    private void restoreDeathItems(Player admin, DeathEntry entry) {
+        FoliaUtil.runAsync(plugin, () ->
+                plugin.getDatabaseManager().getDeathItems(entry.getPlayerUUID(), entry.getTimestamp(), contents ->
+                        FoliaUtil.runOnEntity(plugin, admin, () -> applyDeathItems(admin, contents), null)));
+    }
+
+    private void applyDeathItems(Player admin, ItemStack[] contents) {
+        try {
+            if (contents == null || ItemStackSerializer.isEmpty(contents)) {
+                admin.sendMessage(plugin.getMessagesManager().adminItemsNone());
+                return;
+            }
+
+            PlayerInventory inv = admin.getInventory();
+            inv.clear();
+            admin.setItemOnCursor(null);
+
+            ItemStack[] toApply = ItemStackSerializer.cloneContents(contents);
+            // Preserve length expected by setContents (storage + armor + offhand)
+            if (toApply.length < inv.getContents().length) {
+                ItemStack[] padded = new ItemStack[inv.getContents().length];
+                System.arraycopy(toApply, 0, padded, 0, toApply.length);
+                toApply = padded;
+            }
+            inv.setContents(toApply);
+            admin.sendMessage(plugin.getMessagesManager().adminItemsRestored());
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING,
+                    "Failed to restore death items for admin " + admin.getName(), e);
+            admin.sendMessage(plugin.getMessagesManager().adminItemsFailed());
         }
     }
 

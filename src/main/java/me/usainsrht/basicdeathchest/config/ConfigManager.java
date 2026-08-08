@@ -215,7 +215,8 @@ public class ConfigManager {
                     "<gray>You can teleport to your death locations from this GUI.",
                     "",
                     "<gray>Teleportation Cost: <gold>%cost% coins</gold>",
-                    "<gray>Remaining Free Uses: <green>%free_uses%</green>"
+                    "<gray>Remaining Free Uses: <green>%free_uses%</green>",
+                    "<gray>Death entries older than <white>%max_age_hours% hours</white> will be deleted."
             );
         }
 

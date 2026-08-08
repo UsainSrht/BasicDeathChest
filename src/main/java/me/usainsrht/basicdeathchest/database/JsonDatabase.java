@@ -2,7 +2,10 @@ package me.usainsrht.basicdeathchest.database;
 
 import com.google.gson.*;
 import me.usainsrht.basicdeathchest.BasicDeathChest;
+import me.usainsrht.basicdeathchest.database.model.ChestStatus;
 import me.usainsrht.basicdeathchest.database.model.DeathEntry;
+import me.usainsrht.basicdeathchest.util.ItemStackSerializer;
+import org.bukkit.inventory.ItemStack;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -17,6 +20,8 @@ import java.util.logging.Level;
  * The file is read entirely into memory and re-written on each mutation.
  * Suitable for small servers; prefer {@link SQLiteDatabase} for larger ones.
  *
+ * <p>Death item snapshots are stored as YAML sidecars under {@code death-items/}.
+ *
  * <p>All public methods are intended to be called from an async thread.
  */
 public class JsonDatabase implements DatabaseManager {
@@ -26,6 +31,7 @@ public class JsonDatabase implements DatabaseManager {
     private final BasicDeathChest plugin;
     private File dataFile;
     private File freeUsesFile;
+    private File deathItemsDir;
     /** In-memory representation: UUID string → list of entries (newest first) */
     private final Map<String, List<DeathEntry>> data = new LinkedHashMap<>();
     private final Map<String, Integer> freeUsesData = new LinkedHashMap<>();
@@ -54,6 +60,12 @@ public class JsonDatabase implements DatabaseManager {
             freeUsesFile.createNewFile();
             saveFreeUsesToDisk();
         }
+
+        deathItemsDir = new File(folder, "death-items");
+        if (!deathItemsDir.exists()) {
+            deathItemsDir.mkdirs();
+        }
+        purgeAgedDeathItems();
         plugin.getLogger().info("JSON database initialised at " + dataFile.getPath() + " and " + freeUsesFile.getPath());
     }
 
@@ -63,14 +75,16 @@ public class JsonDatabase implements DatabaseManager {
         List<DeathEntry> entries = data.computeIfAbsent(key, k -> new ArrayList<>());
         entries.add(0, entry); // newest first
 
-        // Prune if max is positive
+        // Prune if max is positive (also drop matching item sidecars)
         int max = plugin.getConfigManager().getMaxEntriesPerPlayer();
         if (max > 0) {
             while (entries.size() > max) {
-                entries.remove(entries.size() - 1);
+                DeathEntry removed = entries.remove(entries.size() - 1);
+                deleteDeathItemsFile(removed.getPlayerUUID(), removed.getTimestamp());
             }
         }
         saveToDisk();
+        purgeAgedDeathItems();
     }
 
     @Override
@@ -108,7 +122,55 @@ public class JsonDatabase implements DatabaseManager {
         List<DeathEntry> entries = data.get(playerUUID.toString());
         if (entries == null) return;
         entries.removeIf(e -> e.getTimestamp() == timestamp);
+        deleteDeathItemsFile(playerUUID, timestamp);
         saveToDisk();
+    }
+
+    @Override
+    public synchronized void saveDeathItems(UUID playerUUID, long timestamp, ItemStack[] contents) {
+        try {
+            if (ItemStackSerializer.isEmpty(contents)) return;
+            File file = deathItemsFile(playerUUID, timestamp);
+            ItemStackSerializer.saveToFile(file, contents, plugin.getLogger());
+            purgeAgedDeathItems();
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to save death items for " + playerUUID, e);
+        }
+    }
+
+    @Override
+    public void getDeathItems(UUID playerUUID, long timestamp, Consumer<ItemStack[]> callback) {
+        ItemStack[] contents;
+        synchronized (this) {
+            try {
+                contents = ItemStackSerializer.loadFromFile(
+                        deathItemsFile(playerUUID, timestamp), plugin.getLogger());
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to load death items for " + playerUUID, e);
+                contents = new ItemStack[ItemStackSerializer.PLAYER_INVENTORY_SIZE];
+            }
+        }
+        callback.accept(contents);
+    }
+
+    @Override
+    public synchronized void deleteDeathItems(UUID playerUUID, long timestamp) {
+        deleteDeathItemsFile(playerUUID, timestamp);
+    }
+
+    @Override
+    public synchronized void purgeOldDeathItems(long cutoffMillis) {
+        if (cutoffMillis <= 0 || deathItemsDir == null || !deathItemsDir.isDirectory()) return;
+        File[] files = deathItemsDir.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (files == null) return;
+        for (File file : files) {
+            long ts = parseTimestampFromFileName(file.getName());
+            if (ts >= 0 && ts < cutoffMillis) {
+                if (!file.delete()) {
+                    plugin.getLogger().warning("Failed to delete aged death-items file: " + file.getName());
+                }
+            }
+        }
     }
 
     @Override
@@ -160,15 +222,22 @@ public class JsonDatabase implements DatabaseManager {
                 List<DeathEntry> list = new ArrayList<>();
                 for (JsonElement el : playerEntry.getValue().getAsJsonArray()) {
                     JsonObject obj = el.getAsJsonObject();
+                    String killer = obj.has("killer") && !obj.get("killer").isJsonNull()
+                            ? obj.get("killer").getAsString() : null;
+                    ChestStatus chestStatus = obj.has("chestStatus") && !obj.get("chestStatus").isJsonNull()
+                            ? ChestStatus.fromStorage(obj.get("chestStatus").getAsString())
+                            : ChestStatus.UNKNOWN;
                     list.add(new DeathEntry(
                             UUID.fromString(obj.get("playerUUID").getAsString()),
                             obj.get("playerName").getAsString(),
                             obj.get("timestamp").getAsLong(),
                             obj.get("deathCause").getAsString(),
+                            killer,
                             obj.get("x").getAsInt(),
                             obj.get("y").getAsInt(),
                             obj.get("z").getAsInt(),
-                            obj.get("world").getAsString()
+                            obj.get("world").getAsString(),
+                            chestStatus
                     ));
                 }
                 data.put(playerEntry.getKey(), list);
@@ -188,10 +257,14 @@ public class JsonDatabase implements DatabaseManager {
                 obj.addProperty("playerName", e.getPlayerName());
                 obj.addProperty("timestamp", e.getTimestamp());
                 obj.addProperty("deathCause", e.getDeathCause());
+                if (e.getKiller() != null) {
+                    obj.addProperty("killer", e.getKiller());
+                }
                 obj.addProperty("x", e.getX());
                 obj.addProperty("y", e.getY());
                 obj.addProperty("z", e.getZ());
                 obj.addProperty("world", e.getWorld());
+                obj.addProperty("chestStatus", e.getChestStatus().name());
                 arr.add(obj);
             }
             root.add(playerEntry.getKey(), arr);
@@ -224,6 +297,40 @@ public class JsonDatabase implements DatabaseManager {
             GSON.toJson(root, writer);
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to write free_uses.json", e);
+        }
+    }
+
+    private File deathItemsFile(UUID playerUUID, long timestamp) {
+        return new File(deathItemsDir, playerUUID + "_" + timestamp + ".yml");
+    }
+
+    private void deleteDeathItemsFile(UUID playerUUID, long timestamp) {
+        try {
+            File file = deathItemsFile(playerUUID, timestamp);
+            if (file.exists() && !file.delete()) {
+                plugin.getLogger().warning("Failed to delete death-items file: " + file.getName());
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to delete death items for " + playerUUID, e);
+        }
+    }
+
+    private void purgeAgedDeathItems() {
+        int maxAgeHours = plugin.getConfigManager().getGuiMaxRecordAgeHours();
+        if (maxAgeHours <= 0) return;
+        long cutoff = System.currentTimeMillis() - maxAgeHours * 3600000L;
+        purgeOldDeathItems(cutoff);
+    }
+
+    private static long parseTimestampFromFileName(String name) {
+        // Expected: <uuid>_<timestamp>.yml
+        int underscore = name.lastIndexOf('_');
+        int dot = name.lastIndexOf('.');
+        if (underscore < 0 || dot <= underscore) return -1L;
+        try {
+            return Long.parseLong(name.substring(underscore + 1, dot));
+        } catch (NumberFormatException e) {
+            return -1L;
         }
     }
 }
