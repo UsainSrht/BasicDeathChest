@@ -23,6 +23,7 @@ chest-emptied: "<green>Your death chest was emptied and has been removed."
 chest-expired: "<yellow>Your death chest at <white>%x%<yellow>, <white>%y%<yellow>, <white>%z%<yellow> has expired and the contents were dropped."
 
 # ─── GUI ─────────────────────────────────────────────────────
+# Placeholders for gui-no-entries & gui-no-entries-lore: %max_age_hours%
 gui-no-entries: "<yellow>You have no recorded death locations yet."
 gui-no-entries-lore:
   - "<gray>Go explore the world!"

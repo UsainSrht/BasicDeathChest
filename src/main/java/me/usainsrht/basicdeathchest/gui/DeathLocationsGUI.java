@@ -223,14 +223,15 @@ public class DeathLocationsGUI implements InventoryHolder {
     }
 
     private ItemStack buildNoRecordItem() {
+        String maxAgeHours = String.valueOf(plugin.getConfigManager().getGuiMaxRecordAgeHours());
         Material material = plugin.getConfigManager().getGuiNoRecordMaterial();
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.displayName(formatItemText(plugin.getMessagesManager().guiNoEntries()));
+            meta.displayName(formatItemText(plugin.getMessagesManager().guiNoEntries(maxAgeHours)));
             List<Component> lore = new ArrayList<>();
             for (String line : plugin.getMessagesManager().guiNoEntriesLore()) {
-                lore.add(formatItemText(MiniMessageUtil.parse(line)));
+                lore.add(formatItemText(MiniMessageUtil.parse(line, "max_age_hours", maxAgeHours)));
             }
             meta.lore(lore);
             item.setItemMeta(meta);

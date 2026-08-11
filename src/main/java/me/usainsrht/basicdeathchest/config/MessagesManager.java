@@ -108,7 +108,8 @@ public class MessagesManager {
         return get("chest-expired", "x", x, "y", y, "z", z);
     }
 
-    public Component guiNoEntries()                   { return getRawComponent("gui-no-entries"); }
+    public Component guiNoEntries()                   { return guiNoEntries(String.valueOf(plugin.getConfigManager().getGuiMaxRecordAgeHours())); }
+    public Component guiNoEntries(String maxAgeHours) { return getRawComponent("gui-no-entries", "max_age_hours", maxAgeHours); }
     public List<String> guiNoEntriesLore() {
         return cfg.getStringList("gui-no-entries-lore");
     }
