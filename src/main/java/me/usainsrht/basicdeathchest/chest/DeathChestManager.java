@@ -66,6 +66,21 @@ public class DeathChestManager implements IDeathChestManager {
      * @return placement outcome for death history logging
      */
     public ChestStatus createDeathChest(Player player, List<ItemStack> drops) {
+        return createDeathChest(player, player.getLocation(), drops);
+    }
+
+    /**
+     * Creates a death chest for {@code player} at {@code deathLoc},
+     * containing {@code drops}.
+     *
+     * <p>Must be called on the region thread for the death location.
+     *
+     * @param player   the player who died
+     * @param deathLoc the exact death location
+     * @param drops    the items to store (list is NOT cleared — caller is responsible)
+     * @return placement outcome for death history logging
+     */
+    public ChestStatus createDeathChest(Player player, Location deathLoc, List<ItemStack> drops) {
         if (drops.isEmpty()) return ChestStatus.NO_ITEMS;
 
         // Fire pre-create event (cancellable)
@@ -73,16 +88,16 @@ public class DeathChestManager implements IDeathChestManager {
         Bukkit.getPluginManager().callEvent(event);
 
         if (event.isCancelled()) {
-            dropNaturally(player.getLocation(), drops);
+            dropNaturally(deathLoc, drops);
             return ChestStatus.BLOCK_OBSTRUCTION;
         }
 
         List<ItemStack> chestItems = event.getDrops();
-        Block origin = findSuitableBlock(player.getLocation().getBlock(), player);
+        Block origin = findSuitableBlock(deathLoc.getBlock(), player);
 
         ChestStatus placementBlock = validatePlacement(origin, player);
         if (placementBlock != null) {
-            dropNaturally(player.getLocation(), chestItems);
+            dropNaturally(deathLoc, chestItems);
             return placementBlock;
         }
 
@@ -98,20 +113,22 @@ public class DeathChestManager implements IDeathChestManager {
         startExpiryTimer(chest);
 
         // Send coordinates message
-        Location deathLoc = chest.getPrimaryLocation();
-        if (plugin.getConfigManager().isCoordinatesEnabled()) {
+        Location primaryLoc = chest.getPrimaryLocation();
+        if (plugin.getConfigManager().isCoordinatesEnabled() && player.isOnline()) {
             player.sendMessage(plugin.getMessagesManager().coordinatesMessage(
-                    LocationUtil.x(deathLoc),
-                    LocationUtil.y(deathLoc),
-                    LocationUtil.z(deathLoc),
-                    LocationUtil.worldName(deathLoc)));
+                    LocationUtil.x(primaryLoc),
+                    LocationUtil.y(primaryLoc),
+                    LocationUtil.z(primaryLoc),
+                    LocationUtil.worldName(primaryLoc)));
         }
 
         // Notify player
-        player.sendMessage(plugin.getMessagesManager().chestSpawned(
-                LocationUtil.x(deathLoc),
-                LocationUtil.y(deathLoc),
-                LocationUtil.z(deathLoc)));
+        if (player.isOnline()) {
+            player.sendMessage(plugin.getMessagesManager().chestSpawned(
+                    LocationUtil.x(primaryLoc),
+                    LocationUtil.y(primaryLoc),
+                    LocationUtil.z(primaryLoc)));
+        }
         return ChestStatus.PLACED;
     }
 

@@ -292,7 +292,9 @@ public class ChestPlacementHelper {
     }
 
     private void notifyNoSpace(Player player) {
-        player.sendMessage(plugin.getMessagesManager().chestSpawnedNoSpace());
+        if (player.isOnline()) {
+            player.sendMessage(plugin.getMessagesManager().chestSpawnedNoSpace());
+        }
     }
 
     private String resolveTitle(Player player) {

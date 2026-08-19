@@ -101,7 +101,9 @@ public class PlayerDeathListener implements Listener {
         // ── Guard: permission (still log the death) ───────────────────────────
         if (plugin.getConfigManager().isRequirePermission()
                 && !player.hasPermission(plugin.getConfigManager().getRequiredPermission())) {
-            player.sendMessage(plugin.getMessagesManager().chestPermissionRequired());
+            if (player.isOnline()) {
+                player.sendMessage(plugin.getMessagesManager().chestPermissionRequired());
+            }
             saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_PERMISSION);
             return;
         }
@@ -113,18 +115,7 @@ public class PlayerDeathListener implements Listener {
 
             final List<ItemStack> finalDrops = drops;
             FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
-                ChestStatus status;
-                if (!player.isConnected()) {
-                    // Player disconnected before chest could be placed — drop items
-                    for (ItemStack item : finalDrops) {
-                        if (item != null && !item.getType().isAir()) {
-                            deathLoc.getWorld().dropItemNaturally(deathLoc, item);
-                        }
-                    }
-                    status = ChestStatus.BLOCK_OBSTRUCTION;
-                } else {
-                    status = plugin.getDeathChestManager().createDeathChest(player, finalDrops);
-                }
+                ChestStatus status = plugin.getDeathChestManager().createDeathChest(player, deathLoc, finalDrops);
                 saveEntry(identity, timestamp, causeInfo, deathLoc, status);
             });
         } else {
