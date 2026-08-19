@@ -383,6 +383,20 @@ public class PlayerDeathListener implements Listener {
             }
         }
 
+        if (killer == null || killer.isBlank()) {
+            try {
+                org.bukkit.damage.DamageSource damageSource = last.getDamageSource();
+                if (damageSource != null) {
+                    if (damageSource.getCausingEntity() != null) {
+                        killer = resolveKillerName(damageSource.getCausingEntity());
+                    } else if (damageSource.getDirectEntity() != null) {
+                        killer = resolveKillerName(damageSource.getDirectEntity());
+                    }
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+
         if (killer != null && killer.isBlank()) {
             killer = null;
         }

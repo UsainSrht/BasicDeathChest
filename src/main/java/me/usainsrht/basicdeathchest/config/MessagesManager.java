@@ -163,19 +163,48 @@ public class MessagesManager {
         return getRawComponent("help-info", "cmd", cmd);
     }
 
+    private static final java.util.Set<String> DIRECT_DAMAGE_CAUSES = java.util.Set.of(
+            "ENTITY_ATTACK",
+            "ENTITY_SWEEP_ATTACK",
+            "PROJECTILE",
+            "THORNS",
+            "SONIC_BOOM",
+            "ENTITY_EXPLOSION"
+    );
+
+    /**
+     * Checks if the given damage cause is considered a direct entity attack.
+     */
+    public boolean isDirectDamageCause(String cause) {
+        if (cause == null || cause.isBlank()) return false;
+        return DIRECT_DAMAGE_CAUSES.contains(cause.toUpperCase(java.util.Locale.ROOT));
+    }
+
     /**
      * Formats a death cause for display using {@code death-cause-format} /
-     * {@code death-cause-format-killer} from messages.yml.
+     * {@code death-cause-format-direct} / {@code death-cause-format-indirect} from messages.yml.
      *
      * <p>Placeholders: {@code %cause%} (translated damage type),
      * {@code %killer%} (player or mob name).
      */
     public String formatDeathCause(String deathCause, String killer) {
         String translatedCause = getTranslatedCause(deathCause);
-        String killerName = killer == null ? "" : killer;
-        String format = killerName.isBlank()
-                ? cfg.getString("death-cause-format", "%cause%")
-                : cfg.getString("death-cause-format-killer", "%killer%");
+        String killerName = killer == null ? "" : killer.trim();
+
+        if (killerName.isEmpty()) {
+            String format = cfg.getString("death-cause-format", "%cause%");
+            return format.replace("%cause%", translatedCause);
+        }
+
+        boolean direct = isDirectDamageCause(deathCause);
+        String format;
+        if (direct) {
+            format = cfg.getString("death-cause-format-direct",
+                    cfg.getString("death-cause-format-killer", "%killer%"));
+        } else {
+            format = cfg.getString("death-cause-format-indirect", "%cause% / %killer%");
+        }
+
         return format
                 .replace("%cause%", translatedCause)
                 .replace("%killer%", killerName);

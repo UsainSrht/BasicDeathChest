@@ -103,13 +103,16 @@ help-info: "<yellow>/%cmd% info</yellow> <gray>— Show this help message."
 #
 # Examples:
 #   "%killer%"              → Zombie / Steve
-#   "%cause%"               → Entity Attack / Fall Damage
-#   "%cause%: %killer%"     → Entity Attack: Zombie
-#   "%killer% (%cause%)"    → Zombie (Entity Attack)
+#   "%cause%"               → Fall Damage / Lava
+#   "%cause% / %killer%"    → Fall Damage / Steve
+#   "%cause%: %killer%"     → Fall Damage: Steve
+#   "%killer% (%cause%)"    → Steve (Fall Damage)
 #
-# Used when a killer entity is known (mob, player, projectile shooter, etc.)
-death-cause-format-killer: "%killer%"
-# Used for environmental deaths with no killer (fall, lava, drowning, …)
+# Used when an entity directly killed the player (melee attack, projectile, sonic boom, etc.)
+death-cause-format-direct: "%killer%"
+# Used for indirect deaths involving an entity (e.g. falling, lava, drowning while running from an entity)
+death-cause-format-indirect: "%cause% / %killer%"
+# Used for environmental deaths with no entity involved (fall, lava, drowning, …)
 death-cause-format: "%cause%"
 
 # ─── Death Reasons ───────────────────────────────────────────
