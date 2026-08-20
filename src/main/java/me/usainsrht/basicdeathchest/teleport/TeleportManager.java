@@ -68,6 +68,12 @@ public class TeleportManager {
             return;
         }
 
+        if (!free && !plugin.getConfigManager().isTeleportWorldAllowed(entry.getWorld())) {
+            player.sendMessage(plugin.getMessagesManager().teleportWorldNotAllowed());
+            playFailureSound(player);
+            return;
+        }
+
         // Check and deduct cost
         if (!free && !handleCost(player))
             return;

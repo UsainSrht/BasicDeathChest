@@ -5,9 +5,30 @@
 # ============================================================
 
 # ─── World Settings ──────────────────────────────────────────
-worlds:
-  # If true, the list below is a whitelist (only listed worlds spawn chests).
-  # If false, the list is a blacklist (listed worlds are excluded).
+# Configure per-feature world access. Each category supports:
+#   whitelist: true  -> Only worlds in the list are allowed (whitelist mode).
+#   whitelist: false -> Worlds in the list are excluded (blacklist mode).
+
+# Worlds where a death chest is spawned when a player dies.
+chest-worlds:
+  whitelist: true
+  list:
+    - world
+    - world_nether
+    - world_the_end
+
+# Worlds where death locations will appear in the player's GUI (/deathchest gui).
+# (Note: Admins using /deathchest gui <player> can always view all deaths across all worlds).
+entry-worlds:
+  whitelist: true
+  list:
+    - world
+    - world_nether
+    - world_the_end
+
+# Worlds that players are allowed to teleport to from their death GUI.
+# (Note: Admin teleports in the admin GUI bypass this check).
+teleport-worlds:
   whitelist: true
   list:
     - world
@@ -86,8 +107,6 @@ database:
   # How many death entries to keep per player. Set to 0 or negative for permanent logging.
   # Also limits retained admin death-item snapshots (pruned with old entries).
   max-entries-per-player: 50
-  # If true, deaths in worlds not allowed by the world filter will still be logged.
-  bypass-world-filter: false
 
 # ─── Death Locations GUI ─────────────────────────────────────
 gui:

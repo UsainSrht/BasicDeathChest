@@ -99,6 +99,9 @@ public class JsonDatabase implements DatabaseManager {
                 if (cutoff > 0 && entry.getTimestamp() < cutoff) {
                     continue;
                 }
+                if (!plugin.getConfigManager().isEntryWorldAllowed(entry.getWorld())) {
+                    continue;
+                }
                 result.add(entry);
                 if (result.size() >= limit) {
                     break;

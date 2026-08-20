@@ -258,6 +258,7 @@ public class MessagesManager {
         return get("teleport-free-remaining", "remaining", remaining);
     }
     public Component teleportWorldNotLoaded()         { return get("teleport-world-not-loaded"); }
+    public Component teleportWorldNotAllowed()        { return get("teleport-world-not-allowed"); }
 
     public Component bodyguardsSpawned()              { return get("bodyguards-spawned"); }
     public Component bodyguardsDespawned()            { return get("bodyguards-despawned"); }

@@ -70,22 +70,6 @@ public class PlayerDeathListener implements Listener {
         Player player = event.getEntity();
         org.bukkit.World world = player.getWorld();
 
-        // ── Guard: keepInventory ──────────────────────────────────────────────
-        @SuppressWarnings("unchecked")
-        GameRule<Boolean> keepInventoryRule = (GameRule<Boolean>) org.bukkit.Registry.GAME_RULE.get(org.bukkit.NamespacedKey.minecraft("keep_inventory"));
-        if (keepInventoryRule != null) {
-            Boolean keepInv = world.getGameRuleValue(keepInventoryRule);
-            if (Boolean.TRUE.equals(keepInv)) return;
-        }
-
-        // ── Guard: world allowed check ────────────────────────────────────────
-        boolean worldAllowed = plugin.getConfigManager().isWorldAllowed(world.getName());
-        boolean bypassWorldFilter = plugin.getConfigManager().isDatabaseBypassWorldFilter();
-
-        if (!worldAllowed && !bypassWorldFilter) {
-            return;
-        }
-
         // ── Capture drops / death metadata ────────────────────────────────────
         List<ItemStack> drops = new ArrayList<>(event.getDrops());
         handleDeathMessage(event, player);
@@ -95,8 +79,35 @@ public class PlayerDeathListener implements Listener {
         long timestamp = System.currentTimeMillis();
         UUIDInfo identity = new UUIDInfo(player.getUniqueId(), player.getName());
 
-        // Admin inventory snapshot — independent of chest/drops; never abort death flow
+        // Admin inventory snapshot — independent of chest/drops/world/keepInventory; never abort death flow
         saveDeathItemsAsync(identity.uuid(), timestamp, snapshotInventory(player));
+
+        // ── Guard: keepInventory ──────────────────────────────────────────────
+        @SuppressWarnings("unchecked")
+        GameRule<Boolean> keepInventoryRule = (GameRule<Boolean>) org.bukkit.Registry.GAME_RULE.get(org.bukkit.NamespacedKey.minecraft("keep_inventory"));
+        boolean keepInv = false;
+        if (keepInventoryRule != null) {
+            Boolean keepInvVal = world.getGameRuleValue(keepInventoryRule);
+            keepInv = Boolean.TRUE.equals(keepInvVal);
+        }
+
+        if (keepInv) {
+            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_ITEMS);
+            return;
+        }
+
+        // ── Guard: chest world allowed check ──────────────────────────────────
+        boolean chestWorldAllowed = plugin.getConfigManager().isChestWorldAllowed(world.getName());
+        if (!chestWorldAllowed) {
+            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.WORLD_FILTERED);
+            return;
+        }
+
+        // ── Guard: empty drops ────────────────────────────────────────────────
+        if (drops.isEmpty()) {
+            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_ITEMS);
+            return;
+        }
 
         // ── Guard: permission (still log the death) ───────────────────────────
         if (plugin.getConfigManager().isRequirePermission()
@@ -108,20 +119,15 @@ public class PlayerDeathListener implements Listener {
             return;
         }
 
-        // ── Create death chest on the region thread if world is allowed and drops are not empty ───
-        if (worldAllowed && !drops.isEmpty()) {
-            // Clear vanilla drops — chest will contain them
-            event.getDrops().clear();
+        // ── Create death chest on the region thread ───────────────────────────
+        // Clear vanilla drops — chest will contain them
+        event.getDrops().clear();
 
-            final List<ItemStack> finalDrops = drops;
-            FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
-                ChestStatus status = plugin.getDeathChestManager().createDeathChest(player, deathLoc, finalDrops);
-                saveEntry(identity, timestamp, causeInfo, deathLoc, status);
-            });
-        } else {
-            ChestStatus status = !worldAllowed ? ChestStatus.WORLD_FILTERED : ChestStatus.NO_ITEMS;
+        final List<ItemStack> finalDrops = drops;
+        FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
+            ChestStatus status = plugin.getDeathChestManager().createDeathChest(player, deathLoc, finalDrops);
             saveEntry(identity, timestamp, causeInfo, deathLoc, status);
-        }
+        });
     }
 
     private void saveEntry(UUIDInfo identity, long timestamp, CauseInfo causeInfo,

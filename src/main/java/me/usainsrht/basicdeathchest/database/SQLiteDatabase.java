@@ -226,20 +226,23 @@ public class SQLiteDatabase implements DatabaseManager {
 
         synchronized (this) {
             String query = cutoff > 0 ?
-                    "SELECT " + SELECT_COLUMNS + " FROM death_entries WHERE player_uuid = ? AND timestamp >= ? ORDER BY timestamp DESC LIMIT ?;" :
-                    SELECT_LIMIT;
+                    "SELECT " + SELECT_COLUMNS + " FROM death_entries WHERE player_uuid = ? AND timestamp >= ? ORDER BY timestamp DESC;" :
+                    SELECT_ALL;
 
             try (PreparedStatement ps = connection.prepareStatement(query)) {
                 ps.setString(1, playerUUID.toString());
                 if (cutoff > 0) {
                     ps.setLong(2, cutoff);
-                    ps.setInt(3, limit);
-                } else {
-                    ps.setInt(2, limit);
                 }
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        entries.add(fromResultSet(rs));
+                        DeathEntry entry = fromResultSet(rs);
+                        if (plugin.getConfigManager().isEntryWorldAllowed(entry.getWorld())) {
+                            entries.add(entry);
+                            if (entries.size() >= limit) {
+                                break;
+                            }
+                        }
                     }
                 }
             } catch (SQLException e) {

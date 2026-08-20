@@ -69,6 +69,7 @@ teleport-cost: "<yellow>Teleporting cost you <gold>%cost% coins<yellow>."
 teleport-insufficient-funds: "<red>You need <gold>%cost% coins<red> to teleport. You have <gold>%balance%<red>."
 teleport-free-remaining: "<green>Free teleport used. <yellow>%remaining% free teleports remaining."
 teleport-world-not-loaded: "<red>That world is no longer loaded."
+teleport-world-not-allowed: "<red>Teleportation to that world is not allowed."
 
 # ─── Bodyguards ──────────────────────────────────────────────
 bodyguards-spawned: "<green>Two iron golem bodyguards have been summoned to protect you!"

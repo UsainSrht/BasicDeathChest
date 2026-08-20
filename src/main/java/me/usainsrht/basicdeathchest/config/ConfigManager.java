@@ -25,8 +25,9 @@ public class ConfigManager {
     private final BasicDeathChest plugin;
 
     // ── World settings ──────────────────────────────────────────────────────
-    private boolean worldWhitelistMode;
-    private List<String> worldList;
+    private WorldFilter chestWorlds;
+    private WorldFilter entryWorlds;
+    private WorldFilter teleportWorlds;
 
     // ── Permission gate ─────────────────────────────────────────────────────
     private boolean requirePermission;
@@ -138,9 +139,32 @@ public class ConfigManager {
         plugin.reloadConfig();
         FileConfiguration cfg = plugin.getConfig();
 
-        // World
-        worldWhitelistMode = cfg.getBoolean("worlds.whitelist", true);
-        worldList = cfg.getStringList("worlds.list");
+        // World filters
+        if (cfg.contains("chest-worlds")) {
+            boolean chestWhitelist = cfg.getBoolean("chest-worlds.whitelist", true);
+            List<String> chestList = cfg.getStringList("chest-worlds.list");
+            chestWorlds = new WorldFilter(chestWhitelist, chestList);
+        } else {
+            boolean legacyWhitelist = cfg.getBoolean("worlds.whitelist", true);
+            List<String> legacyList = cfg.getStringList("worlds.list");
+            chestWorlds = new WorldFilter(legacyWhitelist, legacyList);
+        }
+
+        boolean entryWhitelist = cfg.getBoolean("entry-worlds.whitelist", true);
+        List<String> entryList = cfg.getStringList("entry-worlds.list");
+        if (entryList.isEmpty() && !cfg.contains("entry-worlds")) {
+            entryList = chestWorlds.getList();
+            entryWhitelist = chestWorlds.isWhitelist();
+        }
+        entryWorlds = new WorldFilter(entryWhitelist, entryList);
+
+        boolean teleportWhitelist = cfg.getBoolean("teleport-worlds.whitelist", true);
+        List<String> teleportList = cfg.getStringList("teleport-worlds.list");
+        if (teleportList.isEmpty() && !cfg.contains("teleport-worlds")) {
+            teleportList = chestWorlds.getList();
+            teleportWhitelist = chestWorlds.isWhitelist();
+        }
+        teleportWorlds = new WorldFilter(teleportWhitelist, teleportList);
 
         // Permission gate
         requirePermission = cfg.getBoolean("require-permission", false);
@@ -397,15 +421,60 @@ public class ConfigManager {
     /**
      * Returns {@code true} if a death chest should be spawned in the given world.
      */
+    public boolean isChestWorldAllowed(String worldName) {
+        return chestWorlds != null && chestWorlds.isAllowed(worldName);
+    }
+
+    /**
+     * Legacy alias for {@link #isChestWorldAllowed(String)}.
+     */
     public boolean isWorldAllowed(String worldName) {
-        boolean inList = worldList.contains(worldName);
-        return worldWhitelistMode == inList;
+        return isChestWorldAllowed(worldName);
+    }
+
+    /**
+     * Returns {@code true} if deaths in the given world should be displayed in the player's GUI.
+     */
+    public boolean isEntryWorldAllowed(String worldName) {
+        return entryWorlds != null && entryWorlds.isAllowed(worldName);
+    }
+
+    /**
+     * Returns {@code true} if players can teleport to deaths in the given world.
+     */
+    public boolean isTeleportWorldAllowed(String worldName) {
+        return teleportWorlds != null && teleportWorlds.isAllowed(worldName);
+    }
+
+    // ─── WorldFilter model ────────────────────────────────────────────────────
+
+    public static class WorldFilter {
+        private final boolean whitelist;
+        private final List<String> list;
+
+        public WorldFilter(boolean whitelist, List<String> list) {
+            this.whitelist = whitelist;
+            this.list = list != null ? list : List.of();
+        }
+
+        public boolean isAllowed(String worldName) {
+            if (worldName == null) return false;
+            boolean inList = list.contains(worldName);
+            return whitelist == inList;
+        }
+
+        public boolean isWhitelist() { return whitelist; }
+        public List<String> getList() { return list; }
     }
 
     // ─── Getters ──────────────────────────────────────────────────────────────
 
-    public boolean isWorldWhitelistMode()           { return worldWhitelistMode; }
-    public List<String> getWorldList()              { return worldList; }
+    public WorldFilter getChestWorlds()             { return chestWorlds; }
+    public WorldFilter getEntryWorlds()             { return entryWorlds; }
+    public WorldFilter getTeleportWorlds()          { return teleportWorlds; }
+
+    public boolean isWorldWhitelistMode()           { return chestWorlds != null && chestWorlds.isWhitelist(); }
+    public List<String> getWorldList()              { return chestWorlds != null ? chestWorlds.getList() : List.of(); }
     public boolean isRequirePermission()            { return requirePermission; }
     public String getRequiredPermission()           { return requiredPermission; }
     public Material getContainerType()              { return containerType; }
