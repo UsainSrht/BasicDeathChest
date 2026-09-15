@@ -81,14 +81,36 @@ public class DeathChestManager implements IDeathChestManager {
      * @return placement outcome for death history logging
      */
     public ChestStatus createDeathChest(Player player, Location deathLoc, List<ItemStack> drops) {
+        return createDeathChest(player, null, deathLoc, drops);
+    }
+
+    /**
+     * Creates a death chest for {@code player} at {@code deathLoc},
+     * containing {@code drops} with killer loot protection if applicable.
+     *
+     * <p>Must be called on the region thread for the death location.
+     *
+     * @param player   the player who died
+     * @param killer   the killer player (if PvP kill), or null
+     * @param deathLoc the exact death location
+     * @param drops    the items to store (list is NOT cleared — caller is responsible)
+     * @return placement outcome for death history logging
+     */
+    public ChestStatus createDeathChest(Player player, Player killer, Location deathLoc, List<ItemStack> drops) {
         if (drops.isEmpty()) return ChestStatus.NO_ITEMS;
+
+        boolean killerProtected = killer != null
+                && !killer.getUniqueId().equals(player.getUniqueId())
+                && plugin.getConfigManager().isKillerProtectionEnabled();
+        UUID killerUUID = killerProtected ? killer.getUniqueId() : null;
+        int killerDuration = killerProtected ? plugin.getConfigManager().getKillerProtectionDuration() : 0;
 
         // Fire pre-create event (cancellable)
         DeathChestCreateEvent event = new DeathChestCreateEvent(player, new ArrayList<>(drops));
         Bukkit.getPluginManager().callEvent(event);
 
         if (event.isCancelled()) {
-            dropNaturally(deathLoc, drops);
+            dropProtectedNaturally(deathLoc, drops, killerUUID, killerDuration);
             return ChestStatus.BLOCK_OBSTRUCTION;
         }
 
@@ -97,11 +119,19 @@ public class DeathChestManager implements IDeathChestManager {
 
         ChestStatus placementBlock = validatePlacement(origin, player);
         if (placementBlock != null) {
-            dropNaturally(deathLoc, chestItems);
+            dropProtectedNaturally(deathLoc, chestItems, killerUUID, killerDuration);
             return placementBlock;
         }
 
-        DeathChest chest = placementHelper.place(player, origin, chestItems);
+        DeathChest chest;
+        try {
+            chest = placementHelper.place(player, killer, origin, chestItems);
+        } catch (Exception e) {
+            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to place death chest for " + player.getName(), e);
+            dropProtectedNaturally(deathLoc, chestItems, killerUUID, killerDuration);
+            return ChestStatus.BLOCK_OBSTRUCTION;
+        }
+
         registerChest(chest);
 
         // Spawn hologram
@@ -224,17 +254,25 @@ public class DeathChestManager implements IDeathChestManager {
         plugin.getHologramManager().remove(chest.getHologram());
 
         // Drop items and remove blocks
+        boolean killerProtected = chest.isKillerProtected();
+        UUID killerUUID = killerProtected ? chest.getKillerUUID() : null;
+        int remainingKillerSeconds = killerProtected ? chest.getRemainingKillerProtectionSeconds() : 0;
+
         for (Location loc : chest.getAllLocations()) {
             Block block = loc.getBlock();
             if (block.getState() instanceof Container container) {
                 Inventory inv = container.getInventory();
                 Location dropLoc = loc.clone().add(0.5, 0.5, 0.5);
+                List<ItemStack> toDrop = new ArrayList<>();
                 for (ItemStack item : inv.getContents()) {
                     if (item != null && !item.getType().isAir()) {
-                        block.getWorld().dropItemNaturally(dropLoc, item);
+                        toDrop.add(item);
                     }
                 }
                 inv.clear();
+                if (!toDrop.isEmpty()) {
+                    dropProtectedNaturally(dropLoc, toDrop, killerUUID, remainingKillerSeconds);
+                }
             }
             block.setType(Material.AIR);
 
@@ -315,10 +353,14 @@ public class DeathChestManager implements IDeathChestManager {
         return ChestStatus.BLOCK_OBSTRUCTION;
     }
 
-    private void dropNaturally(Location loc, List<ItemStack> items) {
-        for (ItemStack item : items) {
-            if (item != null && !item.getType().isAir()) {
-                loc.getWorld().dropItemNaturally(loc, item);
+    public void dropProtectedNaturally(Location loc, List<ItemStack> items, UUID killerUUID, int durationSeconds) {
+        if (killerUUID != null && durationSeconds > 0) {
+            plugin.getKillerProtectionManager().dropProtectedItems(loc, items, killerUUID, durationSeconds);
+        } else {
+            for (ItemStack item : items) {
+                if (item != null && !item.getType().isAir()) {
+                    loc.getWorld().dropItemNaturally(loc, item);
+                }
             }
         }
     }

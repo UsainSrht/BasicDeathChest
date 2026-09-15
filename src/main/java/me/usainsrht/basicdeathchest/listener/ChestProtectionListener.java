@@ -21,6 +21,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataHolder;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.UUID;
+
 /**
  * Protects death chest blocks from:
  * <ul>
@@ -48,22 +50,40 @@ public class ChestProtectionListener implements Listener {
         if (ownerUUID == null) return; // Not a death chest
 
         Player player = event.getPlayer();
-        boolean isOwner = player.getUniqueId().toString().equals(ownerUUID);
         boolean isAdmin = player.hasPermission("basicdeathchest.admin");
+        DeathChest chest = plugin.getDeathChestManager().getDeathChestAt(block.getLocation());
 
-        if (!isOwner && !isAdmin) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getMessagesManager().chestNotOwner());
-            return;
+        boolean isKillerProtected = isKillerProtected(chest, block);
+        UUID killerUUID = getKillerUUID(chest, block);
+        boolean isKiller = killerUUID != null && player.getUniqueId().equals(killerUUID);
+        boolean isOwner = player.getUniqueId().toString().equals(ownerUUID);
+
+        if (isKillerProtected) {
+            boolean allowVictim = plugin.getConfigManager().isKillerProtectionAllowVictim();
+            if (!isAdmin && !isKiller && !(isOwner && allowVictim)) {
+                event.setCancelled(true);
+                int remaining = getRemainingKillerSeconds(chest, block);
+                if (isOwner) {
+                    player.sendMessage(plugin.getMessagesManager().chestKillerProtectedVictim(String.valueOf(remaining)));
+                } else {
+                    player.sendMessage(plugin.getMessagesManager().chestKillerProtected(String.valueOf(remaining)));
+                }
+                return;
+            }
+        } else {
+            if (!isOwner && !isAdmin) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.getMessagesManager().chestNotOwner());
+                return;
+            }
         }
 
-        // Owner/admin breaking their chest — always cancel the vanilla break
+        // Owner, killer, or admin breaking chest — always cancel vanilla break
         event.setCancelled(true);
         event.setDropItems(false);
 
-        DeathChest chest = plugin.getDeathChestManager().getDeathChestAt(block.getLocation());
         if (chest != null) {
-            // Remove the entire chest (drops items naturally)
+            // Remove the entire chest (drops items naturally or with killer protection if still active)
             plugin.getDeathChestManager().expireChest(chest, false);
         } else {
             // Chest is in the registry but no model — just clear and remove the block
@@ -81,7 +101,7 @@ public class ChestProtectionListener implements Listener {
         }
 
         // Optionally drop the chest block itself
-        if (plugin.getConfigManager().isDropOnBreak() && (isOwner || isAdmin)) {
+        if (plugin.getConfigManager().isDropOnBreak() && (isOwner || isKiller || isAdmin)) {
             block.getWorld().dropItemNaturally(
                     block.getLocation().add(0.5, 0.5, 0.5),
                     new ItemStack(block.getType()));
@@ -100,10 +120,7 @@ public class ChestProtectionListener implements Listener {
         if (ownerUUID == null) return; // Not a death chest
 
         Player player = event.getPlayer();
-        boolean isOwner = player.getUniqueId().toString().equals(ownerUUID);
-        boolean canOpenOthers = player.hasPermission("basicdeathchest.open-others")
-                || plugin.getConfigManager().isOpenByEveryone();
-
+        boolean isAdmin = player.hasPermission("basicdeathchest.admin");
         DeathChest chest = plugin.getDeathChestManager().getDeathChestAt(block.getLocation());
 
         // Fire the open event
@@ -116,10 +133,32 @@ public class ChestProtectionListener implements Listener {
             }
         }
 
-        if (!isOwner && !canOpenOthers) {
-            event.setCancelled(true);
-            player.sendMessage(plugin.getMessagesManager().chestNotOwner());
-            return;
+        boolean isKillerProtected = isKillerProtected(chest, block);
+        UUID killerUUID = getKillerUUID(chest, block);
+        boolean isKiller = killerUUID != null && player.getUniqueId().equals(killerUUID);
+        boolean isOwner = player.getUniqueId().toString().equals(ownerUUID);
+
+        if (isKillerProtected) {
+            boolean allowVictim = plugin.getConfigManager().isKillerProtectionAllowVictim();
+            if (!isAdmin && !isKiller && !(isOwner && allowVictim)) {
+                event.setCancelled(true);
+                int remaining = getRemainingKillerSeconds(chest, block);
+                if (isOwner) {
+                    player.sendMessage(plugin.getMessagesManager().chestKillerProtectedVictim(String.valueOf(remaining)));
+                } else {
+                    player.sendMessage(plugin.getMessagesManager().chestKillerProtected(String.valueOf(remaining)));
+                }
+                return;
+            }
+        } else {
+            boolean canOpenOthers = player.hasPermission("basicdeathchest.open-others")
+                    || plugin.getConfigManager().isOpenByEveryone();
+
+            if (!isOwner && !canOpenOthers && !isAdmin) {
+                event.setCancelled(true);
+                player.sendMessage(plugin.getMessagesManager().chestNotOwner());
+                return;
+            }
         }
 
         // Bypass vanilla obstruction check (e.g. solid block above chest)
@@ -201,5 +240,47 @@ public class ChestProtectionListener implements Listener {
         if (!(block.getState() instanceof PersistentDataHolder holder)) return null;
         return holder.getPersistentDataContainer()
                 .get(plugin.getDeathChestKey(), PersistentDataType.STRING);
+    }
+
+    private boolean isKillerProtected(DeathChest chest, Block block) {
+        if (chest != null) {
+            return chest.isKillerProtected();
+        }
+        if (block != null && block.getState() instanceof PersistentDataHolder holder) {
+            Long expiry = holder.getPersistentDataContainer().get(
+                    plugin.getDeathChestKillerExpiryKey(), PersistentDataType.LONG);
+            return expiry != null && System.currentTimeMillis() < expiry;
+        }
+        return false;
+    }
+
+    private UUID getKillerUUID(DeathChest chest, Block block) {
+        if (chest != null && chest.getKillerUUID() != null) {
+            return chest.getKillerUUID();
+        }
+        if (block != null && block.getState() instanceof PersistentDataHolder holder) {
+            String str = holder.getPersistentDataContainer().get(
+                    plugin.getDeathChestKillerKey(), PersistentDataType.STRING);
+            if (str != null) {
+                try {
+                    return UUID.fromString(str);
+                } catch (IllegalArgumentException ignored) {}
+            }
+        }
+        return null;
+    }
+
+    private int getRemainingKillerSeconds(DeathChest chest, Block block) {
+        if (chest != null && chest.isKillerProtected()) {
+            return chest.getRemainingKillerProtectionSeconds();
+        }
+        if (block != null && block.getState() instanceof PersistentDataHolder holder) {
+            Long expiry = holder.getPersistentDataContainer().get(
+                    plugin.getDeathChestKillerExpiryKey(), PersistentDataType.LONG);
+            if (expiry != null && expiry > System.currentTimeMillis()) {
+                return (int) Math.ceil((expiry - System.currentTimeMillis()) / 1000.0);
+            }
+        }
+        return 0;
     }
 }

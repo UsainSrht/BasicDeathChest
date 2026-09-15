@@ -39,6 +39,11 @@ public class ConfigManager {
     private boolean dropOnBreak;
     private boolean openByEveryone;
 
+    // ── Killer Loot Protection ──────────────────────────────────────────────
+    private boolean killerProtectionEnabled;
+    private int killerProtectionDuration;
+    private boolean killerProtectionAllowVictim;
+
     // ── Timer ───────────────────────────────────────────────────────────────
     private int timerDuration;        // seconds; ≤ 0 → infinite
     private Sound expirySound;
@@ -175,6 +180,11 @@ public class ConfigManager {
         containerTitle = cfg.getString("container.title", "<gold>%player%</gold>");
         dropOnBreak = cfg.getBoolean("container.drop-on-break", false);
         openByEveryone = cfg.getBoolean("container.open-by-everyone", false);
+
+        // Killer Loot Protection
+        killerProtectionEnabled = cfg.getBoolean("killer-protection.enabled", true);
+        killerProtectionDuration = Math.max(0, cfg.getInt("killer-protection.duration", 10));
+        killerProtectionAllowVictim = cfg.getBoolean("killer-protection.allow-victim", false);
 
         // Timer
         timerDuration = cfg.getInt("timer.duration", 300);
@@ -480,6 +490,9 @@ public class ConfigManager {
     public Material getContainerType()              { return containerType; }
     public String getContainerTitle()               { return containerTitle; }
     public boolean isDropOnBreak()                  { return dropOnBreak; }
+    public boolean isKillerProtectionEnabled()      { return killerProtectionEnabled; }
+    public int getKillerProtectionDuration()        { return killerProtectionDuration; }
+    public boolean isKillerProtectionAllowVictim()   { return killerProtectionAllowVictim; }
     public int getTimerDuration()                   { return timerDuration; }
     public boolean isInfiniteTimer()                { return timerDuration <= 0; }
     public Sound getExpirySound()                   { return expirySound; }

@@ -57,15 +57,22 @@ public class BasicDeathChest extends JavaPlugin {
     private BodyguardManager bodyguardManager;
     private VaultEconomyHook vaultEconomy;
     private MiniPlaceholdersHook miniPlaceholders;
+    private me.usainsrht.basicdeathchest.protection.KillerProtectionManager killerProtectionManager;
 
     /** PDC key used to tag death chest block states with the owner's UUID string. */
     private NamespacedKey deathChestKey;
+    /** PDC key used to tag death chest block states with the killer's UUID string. */
+    private NamespacedKey deathChestKillerKey;
+    /** PDC key used to tag death chest block states with the killer protection expiry timestamp in millis. */
+    private NamespacedKey deathChestKillerExpiryKey;
 
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
     public void onEnable() {
         deathChestKey = new NamespacedKey(this, "death_chest_owner");
+        deathChestKillerKey = new NamespacedKey(this, "death_chest_killer");
+        deathChestKillerExpiryKey = new NamespacedKey(this, "death_chest_killer_expiry");
 
         // Config & messages (synchronous — no Bukkit world API needed)
         configManager = new ConfigManager(this);
@@ -94,12 +101,14 @@ public class BasicDeathChest extends JavaPlugin {
         miniPlaceholders.initialize();
 
         // Core managers
+        killerProtectionManager = new me.usainsrht.basicdeathchest.protection.KillerProtectionManager(this);
         deathChestManager = new DeathChestManager(this);
         teleportManager   = new TeleportManager(this);
         bodyguardManager  = new BodyguardManager(this);
 
         // Register listeners
         var pm = getServer().getPluginManager();
+        pm.registerEvents(killerProtectionManager, this);
         pm.registerEvents(new PlayerDeathListener(this), this);
         pm.registerEvents(new ChestProtectionListener(this), this);
         pm.registerEvents(new PlayerJoinListener(this), this);
@@ -160,6 +169,11 @@ public class BasicDeathChest extends JavaPlugin {
             bodyguardManager.removeAll();
         }
 
+        // Cancel all killer protection tasks
+        if (killerProtectionManager != null) {
+            killerProtectionManager.disableAll();
+        }
+
         // Close database
         if (databaseManager != null) {
             databaseManager.close();
@@ -194,12 +208,15 @@ public class BasicDeathChest extends JavaPlugin {
     public BodyguardManager getBodyguardManager()  { return bodyguardManager; }
     public VaultEconomyHook getVaultEconomy()      { return vaultEconomy; }
     public MiniPlaceholdersHook getMiniPlaceholders() { return miniPlaceholders; }
+    public me.usainsrht.basicdeathchest.protection.KillerProtectionManager getKillerProtectionManager() { return killerProtectionManager; }
 
     /**
      * Returns the {@link NamespacedKey} used to tag death chest block states in PDC.
      * External plugins may use this to detect death chests without importing internal classes.
      */
     public NamespacedKey getDeathChestKey()        { return deathChestKey; }
+    public NamespacedKey getDeathChestKillerKey()  { return deathChestKillerKey; }
+    public NamespacedKey getDeathChestKillerExpiryKey() { return deathChestKillerExpiryKey; }
 
     // ─── Private helpers ──────────────────────────────────────────────────────
 

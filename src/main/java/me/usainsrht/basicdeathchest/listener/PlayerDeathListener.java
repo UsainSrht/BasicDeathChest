@@ -24,6 +24,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.TNTPrimed;
+import org.bukkit.entity.Tameable;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -79,6 +80,11 @@ public class PlayerDeathListener implements Listener {
         long timestamp = System.currentTimeMillis();
         UUIDInfo identity = new UUIDInfo(player.getUniqueId(), player.getName());
 
+        Player killer = resolveKillerPlayer(event);
+        boolean isPvPKill = killer != null && !killer.getUniqueId().equals(player.getUniqueId());
+        boolean killerProtectionEnabled = isPvPKill && plugin.getConfigManager().isKillerProtectionEnabled();
+        int killerDuration = killerProtectionEnabled ? plugin.getConfigManager().getKillerProtectionDuration() : 0;
+
         // Admin inventory snapshot — independent of chest/drops/world/keepInventory; never abort death flow
         saveDeathItemsAsync(identity.uuid(), timestamp, snapshotInventory(player));
 
@@ -100,6 +106,15 @@ public class PlayerDeathListener implements Listener {
         boolean chestWorldAllowed = plugin.getConfigManager().isChestWorldAllowed(world.getName());
         if (!chestWorldAllowed) {
             saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.WORLD_FILTERED);
+            if (killerProtectionEnabled && !drops.isEmpty()) {
+                event.getDrops().clear();
+                final List<ItemStack> finalDrops = drops;
+                final UUID killerUUID = killer.getUniqueId();
+                FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
+                    plugin.getKillerProtectionManager().dropProtectedItems(
+                            deathLoc, finalDrops, killerUUID, killerDuration);
+                });
+            }
             return;
         }
 
@@ -116,6 +131,15 @@ public class PlayerDeathListener implements Listener {
                 player.sendMessage(plugin.getMessagesManager().chestPermissionRequired());
             }
             saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_PERMISSION);
+            if (killerProtectionEnabled && !drops.isEmpty()) {
+                event.getDrops().clear();
+                final List<ItemStack> finalDrops = drops;
+                final UUID killerUUID = killer.getUniqueId();
+                FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
+                    plugin.getKillerProtectionManager().dropProtectedItems(
+                            deathLoc, finalDrops, killerUUID, killerDuration);
+                });
+            }
             return;
         }
 
@@ -124,8 +148,9 @@ public class PlayerDeathListener implements Listener {
         event.getDrops().clear();
 
         final List<ItemStack> finalDrops = drops;
+        final Player killerRef = isPvPKill ? killer : null;
         FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
-            ChestStatus status = plugin.getDeathChestManager().createDeathChest(player, deathLoc, finalDrops);
+            ChestStatus status = plugin.getDeathChestManager().createDeathChest(player, killerRef, deathLoc, finalDrops);
             saveEntry(identity, timestamp, causeInfo, deathLoc, status);
         });
     }
@@ -458,6 +483,53 @@ public class PlayerDeathListener implements Listener {
         // Fallback when translation key is not resolved (e.g. offline tests)
         String raw = type.name().toLowerCase(Locale.ROOT).replace('_', ' ');
         return Character.toUpperCase(raw.charAt(0)) + raw.substring(1);
+    }
+
+    public static Player resolveKillerPlayer(PlayerDeathEvent event) {
+        Player direct = event.getEntity().getKiller();
+        if (direct != null) {
+            return direct;
+        }
+
+        EntityDamageEvent last = event.getEntity().getLastDamageCause();
+        if (last instanceof EntityDamageByEntityEvent byEntity) {
+            Entity damager = byEntity.getDamager();
+            if (damager instanceof Player p) {
+                return p;
+            }
+            if (damager instanceof Projectile projectile
+                    && projectile.getShooter() instanceof Player p) {
+                return p;
+            }
+            if (damager instanceof TNTPrimed tnt
+                    && tnt.getSource() instanceof Player p) {
+                return p;
+            }
+            if (damager instanceof AreaEffectCloud cloud
+                    && cloud.getSource() instanceof Player p) {
+                return p;
+            }
+            if (damager instanceof Tameable tameable
+                    && tameable.isTamed()
+                    && tameable.getOwner() instanceof Player p) {
+                return p;
+            }
+        }
+
+        try {
+            if (last != null && last.getDamageSource() != null) {
+                org.bukkit.damage.DamageSource source = last.getDamageSource();
+                if (source.getCausingEntity() instanceof Player p) {
+                    return p;
+                }
+                if (source.getDirectEntity() instanceof Player p) {
+                    return p;
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        return null;
     }
 
     private record CauseInfo(String cause, String killer) {}

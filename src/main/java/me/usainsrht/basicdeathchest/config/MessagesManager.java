@@ -103,6 +103,15 @@ public class MessagesManager {
     public Component chestSpawnedNoSpace()            { return get("chest-spawned-no-space"); }
     public Component chestPermissionRequired()        { return get("chest-permission-required"); }
     public Component chestNotOwner()                  { return get("chest-not-owner"); }
+    public Component chestKillerProtected(String seconds) {
+        return get("chest-killer-protected", "seconds", seconds);
+    }
+    public Component chestKillerProtectedVictim(String seconds) {
+        return get("chest-killer-protected-victim", "seconds", seconds);
+    }
+    public Component lootKillerProtected(String seconds) {
+        return get("loot-killer-protected", "seconds", seconds);
+    }
     public Component chestEmptied()                   { return get("chest-emptied"); }
     public Component chestExpired(String x, String y, String z) {
         return get("chest-expired", "x", x, "y", y, "z", z);

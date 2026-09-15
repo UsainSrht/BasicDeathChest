@@ -69,4 +69,34 @@ public interface IDeathChest {
      * Safe to call from any Folia region thread that owns the chest's location.
      */
     void forceExpire();
+
+    /**
+     * Returns the UUID of the killer if this death chest resulted from a PvP kill,
+     * or {@code null} if environmental / mob death.
+     */
+    default UUID getKillerUUID() {
+        return null;
+    }
+
+    /**
+     * Returns the name of the killer if this death chest resulted from a PvP kill,
+     * or {@code null} if environmental / mob death.
+     */
+    default String getKillerName() {
+        return null;
+    }
+
+    /**
+     * Returns {@code true} if this chest is currently protected exclusively for the killer.
+     */
+    default boolean isKillerProtected() {
+        return false;
+    }
+
+    /**
+     * Returns the remaining seconds of killer loot protection, or {@code 0} if none/expired.
+     */
+    default int getRemainingKillerProtectionSeconds() {
+        return 0;
+    }
 }

@@ -18,6 +18,9 @@ chest-permission-required: "<red>You do not have permission to generate a death 
 
 # ─── Chest Interaction ───────────────────────────────────────
 chest-not-owner: "<red>This death chest belongs to someone else."
+chest-killer-protected: "<red>This death chest is protected for the killer for another <yellow>%seconds%s<red>."
+chest-killer-protected-victim: "<red>You were killed! This death chest is protected for your killer for another <yellow>%seconds%s<red>."
+loot-killer-protected: "<red>This loot is protected for the killer for another <yellow>%seconds%s<red>."
 chest-opened-by-owner: "<green>Opening your death chest..."
 chest-emptied: "<green>Your death chest was emptied and has been removed."
 chest-expired: "<yellow>Your death chest at <white>%x%<yellow>, <white>%y%<yellow>, <white>%z%<yellow> has expired and the contents were dropped."

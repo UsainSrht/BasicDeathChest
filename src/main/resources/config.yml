@@ -56,6 +56,19 @@ container:
   # If true, anyone can open anyone's death chest.
   open-by-everyone: false
 
+# ─── Killer Loot Protection ──────────────────────────────────
+# Protects death chest and dropped loot when a player is killed by another player in PvP.
+killer-protection:
+  # Whether killer loot protection is enabled.
+  enabled: true
+
+  # Duration in seconds that the chest and loot are protected exclusively for the killer.
+  duration: 10
+
+  # If true, the victim can also open/break their death chest during the protection duration.
+  # Note: Does not apply to ground-dropped item entities, as Minecraft items support only one owner tag.
+  allow-victim: false
+
 # ─── Timer & Expiration ──────────────────────────────────────
 timer:
   # Duration in seconds. Set to 0 or negative for infinite lifetime.

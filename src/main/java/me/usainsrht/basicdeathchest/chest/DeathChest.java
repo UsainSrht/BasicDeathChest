@@ -26,9 +26,12 @@ public class DeathChest implements IDeathChest {
 
     private final UUID ownerUUID;
     private final String ownerName;
+    private final UUID killerUUID;
+    private final String killerName;
     private final Location primaryLocation;
     private final List<Location> allLocations;
     private final long expiresAt;           // Unix millis, or -1 for infinite
+    private final long killerProtectionExpiresAt; // Unix millis, or 0 if none
     private final AtomicInteger remainingSeconds;
 
     private volatile boolean expired = false;
@@ -43,8 +46,25 @@ public class DeathChest implements IDeathChest {
      */
     public DeathChest(UUID ownerUUID, String ownerName,
                       Location primaryLocation, int timerDuration) {
+        this(ownerUUID, ownerName, null, null, primaryLocation, timerDuration, 0);
+    }
+
+    /**
+     * @param ownerUUID                 the UUID of the player who died
+     * @param ownerName                 display name at time of death
+     * @param killerUUID                the UUID of the killer (if PvP kill), or null
+     * @param killerName                display name of the killer, or null
+     * @param primaryLocation           block location of the first chest placed
+     * @param timerDuration             countdown in seconds; ≤ 0 means infinite
+     * @param killerProtectionDuration  protection duration in seconds; ≤ 0 means none
+     */
+    public DeathChest(UUID ownerUUID, String ownerName,
+                      UUID killerUUID, String killerName,
+                      Location primaryLocation, int timerDuration, int killerProtectionDuration) {
         this.ownerUUID = ownerUUID;
         this.ownerName = ownerName;
+        this.killerUUID = killerUUID;
+        this.killerName = killerName;
         this.primaryLocation = primaryLocation.clone();
         this.allLocations = new ArrayList<>();
         this.allLocations.add(primaryLocation.clone());
@@ -56,12 +76,34 @@ public class DeathChest implements IDeathChest {
             this.expiresAt = System.currentTimeMillis() + (timerDuration * 1000L);
             this.remainingSeconds = new AtomicInteger(timerDuration);
         }
+
+        if (killerUUID != null && killerProtectionDuration > 0) {
+            this.killerProtectionExpiresAt = System.currentTimeMillis() + (killerProtectionDuration * 1000L);
+        } else {
+            this.killerProtectionExpiresAt = 0L;
+        }
     }
 
     // ─── IDeathChest implementation ──────────────────────────────────────────
 
     @Override public UUID getOwnerUUID()           { return ownerUUID; }
     @Override public String getOwnerName()         { return ownerName; }
+    @Override public UUID getKillerUUID()          { return killerUUID; }
+    @Override public String getKillerName()        { return killerName; }
+    public long getKillerProtectionExpiresAt()     { return killerProtectionExpiresAt; }
+
+    @Override
+    public boolean isKillerProtected() {
+        return killerUUID != null && System.currentTimeMillis() < killerProtectionExpiresAt;
+    }
+
+    @Override
+    public int getRemainingKillerProtectionSeconds() {
+        if (!isKillerProtected()) return 0;
+        long diff = killerProtectionExpiresAt - System.currentTimeMillis();
+        return Math.max(0, (int) Math.ceil(diff / 1000.0));
+    }
+
     @Override public Location getPrimaryLocation() { return primaryLocation.clone(); }
 
     @Override

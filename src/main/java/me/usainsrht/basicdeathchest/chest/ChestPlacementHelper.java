@@ -14,6 +14,7 @@ import me.usainsrht.basicdeathchest.util.WorldGuardWrapper;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Handles the physical placement strategy for death chest blocks.
@@ -52,26 +53,43 @@ public class ChestPlacementHelper {
     /**
      * Places one or more container blocks starting at {@code origin} and fills them
      * with {@code items}. Returns the resulting {@link DeathChest} model.
+     */
+    public DeathChest place(Player player, Block origin, List<ItemStack> items) {
+        return place(player, null, origin, items);
+    }
+
+    /**
+     * Places one or more container blocks starting at {@code origin} and fills them
+     * with {@code items} with killer metadata. Returns the resulting {@link DeathChest} model.
      *
-     * <p>
-     * Items that cannot fit in any container are dropped naturally.
-     *
-     * @param player the player who died (used for permission checks)
+     * @param player the player who died
+     * @param killer the killer player (if PvP kill), or null
      * @param origin the block at which to place the first container
      * @param items  the items to store
      * @return the populated {@link DeathChest} model
      */
-    public DeathChest place(Player player, Block origin, List<ItemStack> items) {
+    public DeathChest place(Player player, Player killer, Block origin, List<ItemStack> items) {
         Material type = plugin.getConfigManager().getContainerType();
         String title = resolveTitle(player);
         int timerDuration = plugin.getConfigManager().getTimerDuration();
 
+        boolean killerProtected = killer != null
+                && !killer.getUniqueId().equals(player.getUniqueId())
+                && plugin.getConfigManager().isKillerProtectionEnabled();
+        UUID killerUUID = killerProtected ? killer.getUniqueId() : null;
+        String killerName = killerProtected ? killer.getName() : null;
+        int killerDuration = killerProtected ? plugin.getConfigManager().getKillerProtectionDuration() : 0;
+        long killerExpiry = (killerProtected && killerDuration > 0)
+                ? System.currentTimeMillis() + (killerDuration * 1000L) : 0L;
+
         DeathChest chest = new DeathChest(
                 player.getUniqueId(), player.getName(),
-                origin.getLocation(), timerDuration);
+                killerUUID, killerName,
+                origin.getLocation(), timerDuration, killerDuration);
 
         // Place the primary block and tag it
-        placeContainer(origin, type, title, player.getUniqueId().toString());
+        placeContainer(origin, type, title, player.getUniqueId().toString(),
+                killerUUID != null ? killerUUID.toString() : null, killerExpiry);
 
         // Fill primary container
         Inventory primaryInv = getInventory(origin);
@@ -110,7 +128,8 @@ public class ChestPlacementHelper {
             }
 
             if (secondary != null) {
-                placeContainer(secondary, type, title, player.getUniqueId().toString());
+                placeContainer(secondary, type, title, player.getUniqueId().toString(),
+                        killerUUID != null ? killerUUID.toString() : null, killerExpiry);
                 chest.addLocation(secondary.getLocation());
 
                 // If side by side chest, connect them!
@@ -122,12 +141,12 @@ public class ChestPlacementHelper {
                 List<ItemStack> stillOverflow = fillInventory(secondaryInv, overflow);
 
                 if (!stillOverflow.isEmpty()) {
-                    dropItems(origin, stillOverflow);
+                    dropItems(origin, stillOverflow, killerUUID, killerDuration);
                     notifyNoSpace(player);
                 }
             } else {
                 // No space for a second container — drop overflow
-                dropItems(origin, overflow);
+                dropItems(origin, overflow, killerUUID, killerDuration);
                 notifyNoSpace(player);
             }
         }
@@ -227,7 +246,8 @@ public class ChestPlacementHelper {
         secondary.setBlockData(secondaryData, false);
     }
 
-    private void placeContainer(Block block, Material type, String resolvedTitle, String ownerUUID) {
+    private void placeContainer(Block block, Material type, String resolvedTitle, String ownerUUID,
+                                String killerUUID, long killerExpiry) {
         block.setType(type, false); // Don't apply physics immediately
 
         // Access the tile entity state once and mutate it before update()
@@ -239,6 +259,17 @@ public class ChestPlacementHelper {
                     plugin.getDeathChestKey(),
                     org.bukkit.persistence.PersistentDataType.STRING,
                     ownerUUID);
+
+            if (killerUUID != null && killerExpiry > System.currentTimeMillis()) {
+                holder.getPersistentDataContainer().set(
+                        plugin.getDeathChestKillerKey(),
+                        org.bukkit.persistence.PersistentDataType.STRING,
+                        killerUUID);
+                holder.getPersistentDataContainer().set(
+                        plugin.getDeathChestKillerExpiryKey(),
+                        org.bukkit.persistence.PersistentDataType.LONG,
+                        killerExpiry);
+            }
         }
 
         // Set custom name/title on the container
@@ -282,11 +313,15 @@ public class ChestPlacementHelper {
         return type == Material.CHEST || type == Material.TRAPPED_CHEST;
     }
 
-    private void dropItems(Block at, List<ItemStack> items) {
+    private void dropItems(Block at, List<ItemStack> items, java.util.UUID killerUUID, int killerDuration) {
         org.bukkit.Location center = at.getLocation().add(0.5, 0.5, 0.5);
-        for (ItemStack item : items) {
-            if (item != null && !item.getType().isAir()) {
-                at.getWorld().dropItemNaturally(center, item);
+        if (killerUUID != null && killerDuration > 0) {
+            plugin.getKillerProtectionManager().dropProtectedItems(center, items, killerUUID, killerDuration);
+        } else {
+            for (ItemStack item : items) {
+                if (item != null && !item.getType().isAir()) {
+                    at.getWorld().dropItemNaturally(center, item);
+                }
             }
         }
     }
