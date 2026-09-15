@@ -110,29 +110,41 @@ public class GUIListener implements Listener {
     private void restoreDeathItems(Player admin, DeathEntry entry) {
         FoliaUtil.runAsync(plugin, () ->
                 plugin.getDatabaseManager().getDeathItems(entry.getPlayerUUID(), entry.getTimestamp(), contents ->
-                        FoliaUtil.runOnEntity(plugin, admin, () -> applyDeathItems(admin, contents), null)));
+                        FoliaUtil.runOnEntity(plugin, admin, () -> applyDeathItems(admin, contents, entry), null)));
     }
 
-    private void applyDeathItems(Player admin, ItemStack[] contents) {
+    private void applyDeathItems(Player admin, ItemStack[] contents, DeathEntry entry) {
         try {
-            if (contents == null || ItemStackSerializer.isEmpty(contents)) {
+            boolean hasItems = contents != null && !ItemStackSerializer.isEmpty(contents);
+            boolean hasLevel = entry != null && entry.getLevel() > 0;
+
+            if (!hasItems && !hasLevel) {
                 admin.sendMessage(plugin.getMessagesManager().adminItemsNone());
                 return;
             }
 
-            PlayerInventory inv = admin.getInventory();
-            inv.clear();
-            admin.setItemOnCursor(null);
+            if (hasItems) {
+                PlayerInventory inv = admin.getInventory();
+                inv.clear();
+                admin.setItemOnCursor(null);
 
-            ItemStack[] toApply = ItemStackSerializer.cloneContents(contents);
-            // Preserve length expected by setContents (storage + armor + offhand)
-            if (toApply.length < inv.getContents().length) {
-                ItemStack[] padded = new ItemStack[inv.getContents().length];
-                System.arraycopy(toApply, 0, padded, 0, toApply.length);
-                toApply = padded;
+                ItemStack[] toApply = ItemStackSerializer.cloneContents(contents);
+                // Preserve length expected by setContents (storage + armor + offhand)
+                if (toApply.length < inv.getContents().length) {
+                    ItemStack[] padded = new ItemStack[inv.getContents().length];
+                    System.arraycopy(toApply, 0, padded, 0, toApply.length);
+                    toApply = padded;
+                }
+                inv.setContents(toApply);
             }
-            inv.setContents(toApply);
-            admin.sendMessage(plugin.getMessagesManager().adminItemsRestored());
+
+            if (hasLevel) {
+                admin.setLevel(entry.getLevel());
+                admin.setExp(0.0f);
+            }
+
+            int level = entry != null ? entry.getLevel() : 0;
+            admin.sendMessage(plugin.getMessagesManager().adminItemsRestored(String.valueOf(level)));
         } catch (Exception e) {
             plugin.getLogger().log(Level.WARNING,
                     "Failed to restore death items for admin " + admin.getName(), e);

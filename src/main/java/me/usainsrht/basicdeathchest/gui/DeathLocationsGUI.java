@@ -206,6 +206,9 @@ public class DeathLocationsGUI implements InventoryHolder {
                 plugin.getMessagesManager().getRaw("gui-entry-lore-time"),
                 "time", entry.getFormattedTime())));
         lore.add(formatItemText(MiniMessageUtil.parse(
+                plugin.getMessagesManager().getRaw("gui-entry-lore-level"),
+                "level", String.valueOf(entry.getLevel()))));
+        lore.add(formatItemText(MiniMessageUtil.parse(
                 plugin.getMessagesManager().getRaw("gui-entry-lore-chest"),
                 "status", plugin.getMessagesManager().formatChestStatus(entry.getChestStatus()))));
         lore.add(Component.empty());

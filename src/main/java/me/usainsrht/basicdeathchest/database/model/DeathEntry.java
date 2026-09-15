@@ -27,6 +27,7 @@ public final class DeathEntry {
     private final int z;
     private final String world;
     private final ChestStatus chestStatus;
+    private final int level;
 
     /**
      * Constructs a {@code DeathEntry} from a live {@link Location}.
@@ -34,10 +35,19 @@ public final class DeathEntry {
     public DeathEntry(UUID playerUUID, String playerName, long timestamp,
                       String deathCause, String killer, Location location,
                       ChestStatus chestStatus) {
+        this(playerUUID, playerName, timestamp, deathCause, killer, location, chestStatus, 0);
+    }
+
+    /**
+     * Constructs a {@code DeathEntry} from a live {@link Location} with player level.
+     */
+    public DeathEntry(UUID playerUUID, String playerName, long timestamp,
+                      String deathCause, String killer, Location location,
+                      ChestStatus chestStatus, int level) {
         this(playerUUID, playerName, timestamp, deathCause, killer,
                 location.getBlockX(), location.getBlockY(), location.getBlockZ(),
                 location.getWorld() != null ? location.getWorld().getName() : "unknown",
-                chestStatus);
+                chestStatus, level);
     }
 
     /**
@@ -46,6 +56,15 @@ public final class DeathEntry {
     public DeathEntry(UUID playerUUID, String playerName, long timestamp,
                       String deathCause, String killer, int x, int y, int z, String world,
                       ChestStatus chestStatus) {
+        this(playerUUID, playerName, timestamp, deathCause, killer, x, y, z, world, chestStatus, 0);
+    }
+
+    /**
+     * Constructs a {@code DeathEntry} from raw field values with player level.
+     */
+    public DeathEntry(UUID playerUUID, String playerName, long timestamp,
+                      String deathCause, String killer, int x, int y, int z, String world,
+                      ChestStatus chestStatus, int level) {
         this.playerUUID = playerUUID;
         this.playerName = playerName;
         this.timestamp = timestamp;
@@ -57,6 +76,7 @@ public final class DeathEntry {
         this.z = z;
         this.world = world;
         this.chestStatus = chestStatus != null ? chestStatus : ChestStatus.UNKNOWN;
+        this.level = Math.max(0, level);
     }
 
     /**
@@ -93,6 +113,7 @@ public final class DeathEntry {
     public int getZ()            { return z; }
     public String getWorld()     { return world; }
     public ChestStatus getChestStatus() { return chestStatus; }
+    public int getLevel()               { return level; }
 
     /**
      * Returns the timestamp formatted for display (e.g. "2025-06-20 14:30:00").
@@ -107,6 +128,7 @@ public final class DeathEntry {
                 + ", x=" + x + ", y=" + y + ", z=" + z
                 + ", cause=" + deathCause + ", killer=" + killer
                 + ", chestStatus=" + chestStatus
+                + ", level=" + level
                 + ", time=" + getFormattedTime() + "}";
     }
 }

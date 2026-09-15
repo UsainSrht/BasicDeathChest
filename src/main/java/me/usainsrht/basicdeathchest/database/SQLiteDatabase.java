@@ -35,7 +35,8 @@ public class SQLiteDatabase implements DatabaseManager {
                 x            INTEGER NOT NULL,
                 y            INTEGER NOT NULL,
                 z            INTEGER NOT NULL,
-                chest_status TEXT
+                chest_status TEXT,
+                level        INTEGER NOT NULL DEFAULT 0
             );
             """;
 
@@ -56,8 +57,8 @@ public class SQLiteDatabase implements DatabaseManager {
             """;
 
     private static final String INSERT = """
-            INSERT INTO death_entries (player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            INSERT INTO death_entries (player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status, level)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             """;
 
     private static final String SELECT_FREE_USES = """
@@ -69,10 +70,10 @@ public class SQLiteDatabase implements DatabaseManager {
             """;
 
     private static final String SELECT_COLUMNS =
-            "player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status";
+            "player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status, level";
 
     private static final String SELECT_LIMIT = """
-            SELECT player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status
+            SELECT player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status, level
               FROM death_entries
              WHERE player_uuid = ?
              ORDER BY timestamp DESC
@@ -80,7 +81,7 @@ public class SQLiteDatabase implements DatabaseManager {
             """;
 
     private static final String SELECT_ALL = """
-            SELECT player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status
+            SELECT player_uuid, player_name, timestamp, death_cause, killer, world, x, y, z, chest_status, level
               FROM death_entries
              WHERE player_uuid = ?
              ORDER BY timestamp DESC;
@@ -160,6 +161,7 @@ public class SQLiteDatabase implements DatabaseManager {
     private void migrateSchema(Statement stmt) throws SQLException {
         boolean hasKiller = false;
         boolean hasChestStatus = false;
+        boolean hasLevel = false;
         try (ResultSet rs = stmt.executeQuery("PRAGMA table_info(death_entries);")) {
             while (rs.next()) {
                 String name = rs.getString("name");
@@ -167,6 +169,8 @@ public class SQLiteDatabase implements DatabaseManager {
                     hasKiller = true;
                 } else if ("chest_status".equalsIgnoreCase(name)) {
                     hasChestStatus = true;
+                } else if ("level".equalsIgnoreCase(name)) {
+                    hasLevel = true;
                 }
             }
         }
@@ -177,6 +181,10 @@ public class SQLiteDatabase implements DatabaseManager {
         if (!hasChestStatus) {
             stmt.execute("ALTER TABLE death_entries ADD COLUMN chest_status TEXT;");
             plugin.getLogger().info("Migrated death_entries: added chest_status column.");
+        }
+        if (!hasLevel) {
+            stmt.execute("ALTER TABLE death_entries ADD COLUMN level INTEGER NOT NULL DEFAULT 0;");
+            plugin.getLogger().info("Migrated death_entries: added level column.");
         }
     }
 
@@ -193,6 +201,7 @@ public class SQLiteDatabase implements DatabaseManager {
             ps.setInt(8, entry.getY());
             ps.setInt(9, entry.getZ());
             ps.setString(10, entry.getChestStatus().name());
+            ps.setInt(11, entry.getLevel());
             ps.executeUpdate();
 
             // Prune entries exceeding per-player limit if maxEntries is positive
@@ -415,7 +424,8 @@ public class SQLiteDatabase implements DatabaseManager {
                 rs.getInt("y"),
                 rs.getInt("z"),
                 rs.getString("world"),
-                ChestStatus.fromStorage(rs.getString("chest_status"))
+                ChestStatus.fromStorage(rs.getString("chest_status")),
+                rs.getInt("level")
         );
     }
 

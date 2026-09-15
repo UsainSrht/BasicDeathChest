@@ -79,6 +79,7 @@ public class PlayerDeathListener implements Listener {
         CauseInfo causeInfo = extractCause(event);
         long timestamp = System.currentTimeMillis();
         UUIDInfo identity = new UUIDInfo(player.getUniqueId(), player.getName());
+        int level = player.getLevel();
 
         Player killer = resolveKillerPlayer(event);
         boolean isPvPKill = killer != null && !killer.getUniqueId().equals(player.getUniqueId());
@@ -98,14 +99,14 @@ public class PlayerDeathListener implements Listener {
         }
 
         if (keepInv) {
-            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_ITEMS);
+            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_ITEMS, 0);
             return;
         }
 
         // ── Guard: chest world allowed check ──────────────────────────────────
         boolean chestWorldAllowed = plugin.getConfigManager().isChestWorldAllowed(world.getName());
         if (!chestWorldAllowed) {
-            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.WORLD_FILTERED);
+            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.WORLD_FILTERED, level);
             if (killerProtectionEnabled && !drops.isEmpty()) {
                 event.getDrops().clear();
                 final List<ItemStack> finalDrops = drops;
@@ -120,7 +121,7 @@ public class PlayerDeathListener implements Listener {
 
         // ── Guard: empty drops ────────────────────────────────────────────────
         if (drops.isEmpty()) {
-            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_ITEMS);
+            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_ITEMS, level);
             return;
         }
 
@@ -130,7 +131,7 @@ public class PlayerDeathListener implements Listener {
             if (player.isOnline()) {
                 player.sendMessage(plugin.getMessagesManager().chestPermissionRequired());
             }
-            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_PERMISSION);
+            saveEntry(identity, timestamp, causeInfo, deathLoc, ChestStatus.NO_PERMISSION, level);
             if (killerProtectionEnabled && !drops.isEmpty()) {
                 event.getDrops().clear();
                 final List<ItemStack> finalDrops = drops;
@@ -151,15 +152,15 @@ public class PlayerDeathListener implements Listener {
         final Player killerRef = isPvPKill ? killer : null;
         FoliaUtil.runOnRegion(plugin, deathLoc, () -> {
             ChestStatus status = plugin.getDeathChestManager().createDeathChest(player, killerRef, deathLoc, finalDrops);
-            saveEntry(identity, timestamp, causeInfo, deathLoc, status);
+            saveEntry(identity, timestamp, causeInfo, deathLoc, status, level);
         });
     }
 
     private void saveEntry(UUIDInfo identity, long timestamp, CauseInfo causeInfo,
-                           Location deathLoc, ChestStatus chestStatus) {
+                           Location deathLoc, ChestStatus chestStatus, int level) {
         DeathEntry entry = new DeathEntry(
                 identity.uuid(), identity.name(),
-                timestamp, causeInfo.cause(), causeInfo.killer(), deathLoc, chestStatus);
+                timestamp, causeInfo.cause(), causeInfo.killer(), deathLoc, chestStatus, level);
         FoliaUtil.runAsync(plugin, () -> plugin.getDatabaseManager().saveEntry(entry));
     }
 

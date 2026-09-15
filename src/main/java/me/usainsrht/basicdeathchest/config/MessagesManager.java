@@ -275,7 +275,8 @@ public class MessagesManager {
     public Component reloadSuccess()                  { return get("reload-success"); }
     public Component reloadFail()                     { return get("reload-fail"); }
 
-    public Component adminItemsRestored()             { return get("admin-items-restored"); }
+    public Component adminItemsRestored()             { return adminItemsRestored("0"); }
+    public Component adminItemsRestored(String level) { return get("admin-items-restored", "level", level); }
     public Component adminItemsNone()                 { return get("admin-items-none"); }
     public Component adminItemsFailed()               { return get("admin-items-failed"); }
 

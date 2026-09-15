@@ -230,6 +230,8 @@ public class JsonDatabase implements DatabaseManager {
                     ChestStatus chestStatus = obj.has("chestStatus") && !obj.get("chestStatus").isJsonNull()
                             ? ChestStatus.fromStorage(obj.get("chestStatus").getAsString())
                             : ChestStatus.UNKNOWN;
+                    int level = obj.has("level") && !obj.get("level").isJsonNull()
+                            ? obj.get("level").getAsInt() : 0;
                     list.add(new DeathEntry(
                             UUID.fromString(obj.get("playerUUID").getAsString()),
                             obj.get("playerName").getAsString(),
@@ -240,7 +242,8 @@ public class JsonDatabase implements DatabaseManager {
                             obj.get("y").getAsInt(),
                             obj.get("z").getAsInt(),
                             obj.get("world").getAsString(),
-                            chestStatus
+                            chestStatus,
+                            level
                     ));
                 }
                 data.put(playerEntry.getKey(), list);
@@ -268,6 +271,7 @@ public class JsonDatabase implements DatabaseManager {
                 obj.addProperty("z", e.getZ());
                 obj.addProperty("world", e.getWorld());
                 obj.addProperty("chestStatus", e.getChestStatus().name());
+                obj.addProperty("level", e.getLevel());
                 arr.add(obj);
             }
             root.add(playerEntry.getKey(), arr);
